@@ -1,0 +1,30 @@
+FABRIMOTOR v3.4 - Usuarios y roles centralizados en Supabase
+
+ANTES DE ARRANCAR LA APP:
+1. Entra en Supabase.
+2. SQL Editor > New Query.
+3. Ejecuta el archivo:
+   supabase_fabrimotor_users_schema.sql
+
+DESPUÉS:
+1. En la carpeta del proyecto:
+   npm install
+   npm run dev -- --host 0.0.0.0
+
+2. En el menú lateral verás:
+   Base de datos
+   Registros: Compartida
+   Usuarios: Compartidos
+
+IMPORTANTE:
+- Los registros ya estaban compartidos desde v3.3.
+- En v3.4 los usuarios también se cargan desde Supabase.
+- La app mantiene usuarios locales como respaldo si falla Supabase.
+- Si Supabase todavía no tiene usuarios, la app conserva los usuarios locales existentes.
+- Al crear/editar/eliminar usuarios desde Panel Administrador, se sincronizan con Supabase.
+
+PRUEBA RECOMENDADA:
+1. En PC entra como Administrador.
+2. Crea un usuario de prueba.
+3. En tablet pulsa "Actualizar usuarios".
+4. Comprueba que puedes iniciar sesión con ese usuario.

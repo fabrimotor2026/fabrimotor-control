@@ -1,0 +1,25 @@
+FABRIMOTOR v3.3 - Base compartida Supabase
+
+Esta versión parte de FABRIMOTOR_v3.2_TABLET_ESTABLE.
+
+Pasos:
+1. Descomprime el ZIP.
+2. Abre CMD en la carpeta del proyecto.
+3. Ejecuta:
+   npm install
+   npm run dev -- --host 0.0.0.0
+
+4. En el menú lateral debe aparecer:
+   Base de datos
+   Modo: Compartida
+
+5. Prueba:
+   - Guarda una verificación desde tablet.
+   - En PC pulsa "Actualizar datos".
+   - Debe aparecer el registro.
+
+Supabase:
+https://wdhkuhsxbykjqfknxgof.supabase.co
+
+La app guarda primero en localStorage y después sincroniza con Supabase.
+Si falla Supabase, los registros no se pierden localmente.

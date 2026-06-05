@@ -1,0 +1,25 @@
+{
+  "name": "FabriMotor Control de Proceso",
+  "short_name": "FabriMotor",
+  "description": "Control digital de verificaciones de proceso FabriMotor.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#eef3f8",
+  "theme_color": "#1f6f73",
+  "icons": [
+    {
+      "src": "/logo-fabrimotor.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo-fabrimotor.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

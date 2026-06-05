@@ -1,0 +1,4 @@
+// Añadir en src/main.jsx o src/main.tsx:
+import { registerServiceWorker } from "./register-sw";
+
+registerServiceWorker();

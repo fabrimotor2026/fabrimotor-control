@@ -1,0 +1,47 @@
+FABRIMOTOR - Instalación PWA + lector QR OF/Lote
+
+ARCHIVOS INCLUIDOS
+1. App.jsx
+   - Sustituye tu src/App.jsx por este archivo.
+   - Añade botones QR en Orden de fabricación y Lote.
+   - Mantiene entrada manual si la cámara no está disponible.
+
+2. public/manifest.webmanifest
+   - Copiar a la carpeta public/.
+
+3. public/sw.js
+   - Copiar a la carpeta public/.
+
+4. src/register-sw.js
+   - Copiar a la carpeta src/.
+
+5. index_pwa_snippet.html
+   - Copia esas líneas dentro del <head> de index.html.
+
+6. main_jsx_snippet.txt
+   - Copia esas líneas en src/main.jsx.
+
+INSTALACIÓN EN TABLET ANDROID
+1. Ejecuta la app.
+2. Abre la URL desde Chrome en la tablet.
+3. Menú de Chrome > Añadir a pantalla de inicio.
+4. La app quedará como icono independiente.
+
+IMPORTANTE SOBRE QR
+- En Android Chrome/Edge, la lectura de cámara requiere HTTPS o localhost.
+- Si usas la tablet en red local con http://IP:PUERTO, Chrome puede bloquear la cámara.
+- Soluciones:
+  a) Usar un lector QR externo Bluetooth/USB como teclado.
+  b) Servir la app con HTTPS.
+  c) Usar la app instalada como PWA desde un origen seguro.
+
+FORMATO QR RECOMENDADO
+OF:OF-2548;LOTE:L-2026-06-04
+
+También acepta:
+ORDEN=OF-2548;LOT=L-2026-06-04
+WO:2548;BATCH:ABC123
+
+Si el QR solo contiene texto simple:
+- Botón QR de OF lo guarda como OF.
+- Botón QR de Lote lo guarda como Lote.

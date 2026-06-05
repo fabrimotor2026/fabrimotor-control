@@ -1,0 +1,25 @@
+CORRECCIÓN USUARIOS SUPABASE
+
+1) Sustituye tu src/App.jsx por el App.jsx corregido de este ZIP.
+
+2) En Supabase:
+   SQL Editor > New Query
+   Ejecuta el archivo:
+   supabase_fix_password_users.sql
+
+3) Arranca la app:
+   npm install
+   npm run dev -- --host 0.0.0.0
+
+4) Prueba:
+   - Entra como Administrador.
+   - Crea un usuario nuevo.
+   - Comprueba en Supabase > Table Editor > fabrimotor_users que aparece.
+   - En otra tablet/PC pulsa "Actualizar usuarios".
+   - Cierra sesión e inicia con el usuario nuevo.
+
+Cambios aplicados:
+- saveAdminUser ahora llama a Supabase.
+- deleteAdminUser elimina también en Supabase.
+- fetchSharedUsers recupera password.
+- upsertSharedUser guarda password y pin.
