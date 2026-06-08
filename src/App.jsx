@@ -2062,7 +2062,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
         </div>
       )}
       <div className="mx-auto flex min-h-screen max-w-[1600px] flex-col gap-4 p-4 lg:flex-row lg:p-6">
-        <aside className="rounded-3xl border border-slate-200 bg-white p-4 shadow-xl lg:sticky lg:top-6 lg:h-[calc(100vh-48px)] lg:w-72">
+        <aside className="max-h-[calc(100vh-24px)] overflow-y-auto overscroll-contain rounded-3xl border border-slate-200 bg-white p-4 shadow-xl lg:sticky lg:top-6 lg:h-[calc(100vh-48px)] lg:w-72 lg:shrink-0">
           <div className="mb-5 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div
               style={{
@@ -2093,7 +2093,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
             </div>
           </div>
 
-          <nav className="space-y-2">
+          <nav className="space-y-1.5">
             <SidebarButton active={activeView === "nueva"} onClick={() => setActiveView("nueva")} icon={<ClipboardCheck className="h-4 w-4" />} label="Nueva verificación" />
             <SidebarButton active={activeView === "historico"} onClick={() => setActiveView("historico")} icon={<FileText className="h-4 w-4" />} label="Histórico" badge={filteredRecords.length} />
             <SidebarButton onClick={() => setShowRejectsModal(true)} icon={<AlertTriangle className="h-4 w-4" />} label="Rechazos" badge={rejectedRecords.length} danger />
@@ -2108,7 +2108,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
             )}
           </nav>
 
-          <div className="mt-5 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
+          <div className="mt-3 rounded-2xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
             <div className="font-bold">Estado actual</div>
             <div className="mt-2 grid gap-1 text-xs">
               <span>Máquina: <strong>{form.maquina}</strong></span>
@@ -2146,7 +2146,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
             </div>
           </div>
 
-          <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-800">
+          <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-800">
             <div className="text-xs font-black uppercase tracking-wide text-slate-500">Usuario conectado</div>
             <div className="mt-2 font-black text-slate-900">{currentUser.name}</div>
             <div className="text-xs text-slate-600">Rol: {roleLabel(currentUser.role)}</div>
@@ -2160,7 +2160,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
             </Button>
           </div>
 
-          <Button onClick={exportExcel} className="mt-4 w-full rounded-2xl bg-[#1f6f73] text-white shadow-sm">
+          <Button onClick={exportExcel} className="mt-3 w-full rounded-2xl bg-[#1f6f73] text-white shadow-sm">
             <Download className="mr-2 h-4 w-4" />
             Exportar Excel
           </Button>
@@ -2174,8 +2174,20 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
           >
             <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
               <div>
-                <div className="inline-flex items-center gap-2 rounded-full bg-[#e6f4f4] px-4 py-2 text-sm font-bold text-[#1f6f73] ring-1 ring-[#b8dada]">
-                  FABRIMOTOR · {activeView === "nueva" ? "Nueva verificación" : "Histórico de registros"}
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="inline-flex items-center gap-2 rounded-full bg-[#e6f4f4] px-4 py-2 text-sm font-bold text-[#1f6f73] ring-1 ring-[#b8dada]">
+                    FABRIMOTOR · {activeView === "nueva" ? "Nueva verificación" : "Histórico de registros"}
+                  </div>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleLogout}
+                    className="rounded-2xl border-slate-300 bg-white text-xs font-bold text-slate-800 hover:bg-slate-100"
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Salir
+                  </Button>
                 </div>
                 <h2 className="mt-3 text-3xl font-black tracking-tight text-slate-900">
                   {activeView === "nueva" ? "F-1012 · Control de proceso" : "F-1012 · Histórico y calidad"}
@@ -3195,6 +3207,11 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
 
         tbody td {
           color: #0f172a;
+        }
+
+        aside {
+          scrollbar-width: thin;
+          -webkit-overflow-scrolling: touch;
         }
 
         @media print {
