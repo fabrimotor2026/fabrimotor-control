@@ -1,0 +1,18 @@
+CORRECCIÓN V3 - USUARIOS SUPABASE
+
+Error corregido:
+- saveStoredUsers is not defined
+
+Pasos:
+1. Sustituye src/App.jsx por el App.jsx de este ZIP.
+2. Ejecuta en Supabase el archivo:
+   supabase_fix_users_v3.sql
+   Si ya ejecutaste v2, puedes ejecutarlo igualmente; no pasa nada.
+3. Reinicia Vite:
+   Ctrl+C
+   npm install
+   npm run dev -- --host 0.0.0.0
+
+Prueba:
+- Crear usuario nuevo desde Panel Administrador.
+- Comprobar Table Editor > fabrimotor_users.

@@ -1,0 +1,22 @@
+CORRECCIÓN MENÚ LATERAL
+
+Problema corregido:
+- En ordenador/Vercel el menú lateral izquierdo no permitía desplazarse.
+- El botón "Cerrar sesión" quedaba fuera de pantalla.
+
+Cambios:
+- El aside izquierdo ahora tiene max-height y overflow-y-auto.
+- El menú lateral puede desplazarse con rueda/trackpad/táctil.
+- Se añade botón "Salir" también en la cabecera superior como acceso rápido.
+- Menú un poco más compacto.
+
+Instalación:
+1. Sustituye src/App.jsx por el App.jsx de este ZIP.
+2. Prueba local:
+   npm run dev -- --host 0.0.0.0
+3. Si funciona, sube a GitHub:
+   "C:\Program Files\Git\bin\git.exe" add src/App.jsx
+   "C:\Program Files\Git\bin\git.exe" commit -m "Fix menu lateral scroll"
+   "C:\Program Files\Git\bin\git.exe" push
+
+Vercel desplegará automáticamente el cambio.
