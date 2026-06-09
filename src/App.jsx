@@ -1660,8 +1660,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
       localStorage.removeItem("startupPiece");
       localStorage.removeItem("startupOF");
       setStartupReference("F-1012");
-      setStartupPiece("");
-      setStartupOF("");
+        setStartupOF("");
       setShowProductionStart(true);
       setActiveView("nueva");
     } else {
@@ -1685,23 +1684,14 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
     localStorage.removeItem("startupPiece");
     localStorage.removeItem("startupOF");
     setStartupReference("F-1012");
-    setStartupPiece("");
     setStartupOF("");
     setShowProductionStart(false);
     setCurrentUser(null);
   };
 
   const confirmProductionStart = () => {
-    const selectedReferenceData = getReferenceById(startupReference);
-    const piece = startupPiece.trim();
-    const of = startupOF.trim();
-
-    if (!piece) {
-      alert("Debe introducir el número de pieza.");
-      return;
-    }
-
-    localStorage.setItem("startupReference", selectedReferenceData.id);
+    const selectedReferenceData = getReferenceById(startupReference);    const of = startupOF.trim();
+localStorage.setItem("startupReference", selectedReferenceData.id);
     localStorage.setItem("startupPiece", piece);
     localStorage.setItem("startupOF", of);
 
@@ -1709,7 +1699,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
       ...previous,
       referencia: selectedReferenceData.id,
       referenciaNombre: selectedReferenceData.label,
-      numeroPieza: piece,
+      
       ordenFabricacion: of,
     }));
 
@@ -2029,21 +2019,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
   ))}
               </select>
             </label>
-
-            <label className="mb-3 block">
-              <span className="mb-1.5 block text-sm font-bold text-slate-700">
-                Número de pieza
-              </span>
-              <input
-                autoFocus
-                className="input"
-                value={startupPiece}
-                onChange={(event) => setStartupPiece(event.target.value)}
-                placeholder="Ejemplo: 123456"
-              />
-            </label>
-
-            <label className="mb-5 block">
+<label className="mb-5 block">
               <span className="mb-1.5 block text-sm font-bold text-slate-700">
                 Orden de fabricación
               </span>
