@@ -2069,10 +2069,9 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
         <aside className="max-h-[calc(100vh-24px)] overflow-y-auto overscroll-contain rounded-3xl border border-slate-200 bg-white p-4 shadow-xl lg:sticky lg:top-6 lg:h-[calc(100vh-48px)] lg:w-72 lg:shrink-0">
           <div className="mb-5 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div
-              style={{
-                background: "linear-gradient(135deg,#0f5c63 0%,#2b8e96 45%,#6cc8d2 100%)",
-                padding: "22px",
-              }}
+             style={{
+  background: "linear-gradient(135deg,#BDECB6 0%,#A8E09F 100%)",
+}}
             >
               <h1 className="text-4xl font-black tracking-tight text-white">
                 F-1012 · Célula B
@@ -2091,7 +2090,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                 Control digital
               </div>
 
-              <p className="mt-4 text-sm font-medium text-slate-600">
+              <p className="mt-4 text-sm font-medium text-[#0F172A]">
                 Control de proceso · Producción
               </p>
             </div>
