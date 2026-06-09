@@ -1116,9 +1116,11 @@ export default function App() {
   }, [records, form.maquina, form.fecha, form.turno, nowMs]);
 
   const hyundaiWaitInfo = useMemo(() => {
-    if (form.maquina !== "Torno Hyundai") {
-      return { blocked: false, remainingMinutes: 0 };
-    }
+    const machinesWith25MinuteRule = ["Torno Hyundai", "Centro Neway"];
+
+if (!machinesWith25MinuteRule.includes(form.maquina)) {
+  return { blocked: false, remainingMinutes: 0 };
+}
 
     const lastRecord = getLastHyundaiRecord();
 
