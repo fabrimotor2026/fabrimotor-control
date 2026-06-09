@@ -2020,11 +2020,13 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                 value={startupReference}
                 onChange={(event) => setStartupReference(event.target.value)}
               >
-                {REFERENCES.map((reference) => (
-                  <option key={reference.id} value={reference.id}>
-                    {reference.label}
-                  </option>
-                ))}
+               {REFERENCES
+  .filter((reference) => reference.id === "F-1012")
+  .map((reference) => (
+    <option key={reference.id} value={reference.id}>
+      {reference.label}
+    </option>
+  ))}
               </select>
             </label>
 
