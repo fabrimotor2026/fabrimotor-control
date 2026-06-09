@@ -757,19 +757,14 @@ function LoginScreen({ onLogin, users = getStoredUsers() }) {
         <img
           src="/logo-fabrimotor.png"
           alt="FabriMotor"
-          className="mb-8 h-16 w-auto object-contain"
+          className="mb-8 h-20 w-auto object-contain"
         />
 
         <div className="mb-6">
-          <div className="inline-flex rounded-full bg-[#e6f4f4] px-3 py-1 text-xs font-black uppercase tracking-wide text-[#1f6f73] ring-1 ring-[#b8dada]">
-            Acceso seguro
-          </div>
           <h1 className="mt-4 text-3xl font-black tracking-tight text-slate-900">
-            Sistema de verificaciones
+            CONTROL DE PROCESO
           </h1>
-          <p className="mt-2 text-sm text-slate-600">
-            Introduce usuario y contraseña para acceder al control F-1012 · Célula  B.
-          </p>
+
         </div>
 
         <label className="mb-4 block">
@@ -806,7 +801,7 @@ function LoginScreen({ onLogin, users = getStoredUsers() }) {
           </div>
         )}
 
-        <Button type="submit" className="w-full rounded-2xl bg-blue-700 py-5 text-base font-black text-white shadow-lg">
+        <Button type="submit" className="w-full rounded-2xl bg-[#0F5C63] py-5 text-base font-black text-white shadow-lg hover:bg-[#0b454a]">
           Entrar
         </Button>
 
