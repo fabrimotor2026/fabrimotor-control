@@ -52,9 +52,9 @@ const USER_ROLES = [
 const REFERENCES = [
   { id: "F-1012", label: "F-1012 · Célula B", celula: "Célula B" },
   { id: "F-1013", label: "F-1013 · Célula A", celula: "Célula A" },
-  { id: "F-1025", label: "F-1025 · Célula A", celula: "Célula A" },
-  { id: "F-1026", label: "F-1026 · Célula A", celula: "Célula A" },
-  { id: "F-1029", label: "F-1029 · Célula A", celula: "Célula A" },
+  { id: "F-1025", label: "F-1025"},
+  { id: "F-1026", label: "F-1026"},
+  { id: "F-1029", label: "F-1029"},
 ];
 
 function getReferenceById(referenceId) {
@@ -2073,9 +2073,22 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
   background: "linear-gradient(135deg,#BDECB6 0%,#A8E09F 100%)",
 }}
             >
-              <h1 className="text-4xl font-black tracking-tight text-white">
-                F-1012 · Célula B
-              </h1>
+              <div
+  style={{
+    background: "#BDECB6",
+    padding: "22px",
+    minHeight: "120px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    textAlign: "center",
+  }}
+>
+  <h1 className="text-3xl font-black tracking-tight text-slate-900 leading-tight">
+    F-1012 ·<br />
+    Célula B
+  </h1>
+</div>
             </div>
 
             <div className="p-4">
