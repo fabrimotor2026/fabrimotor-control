@@ -5,15 +5,16 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.75.0",
     "@vitejs/plugin-react": "latest",
     "framer-motion": "latest",
     "lucide-react": "latest",
     "react": "latest",
     "react-dom": "latest",
+    "react-is": "^19.2.7",
     "recharts": "latest",
     "vite": "latest",
-    "xlsx": "latest",
-    "@supabase/supabase-js": "^2.75.0"
+    "xlsx": "latest"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.0",
