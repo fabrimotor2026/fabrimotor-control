@@ -2265,12 +2265,18 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                 </Field>
 
                 <Field label="Número de pieza">
-                  <input
-                    className="input bg-slate-100 font-semibold text-slate-700"
-                    value={form.numeroPieza}
-                    readOnly
-                  />
-                </Field>
+  <input
+    className="input font-semibold text-slate-900"
+    value={form.numeroPieza}
+    onChange={(event) =>
+      setForm((previous) => ({
+        ...previous,
+        numeroPieza: event.target.value,
+      }))
+    }
+    placeholder="Introduce el número de pieza"
+  />
+</Field>
               </div>
 
               <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
