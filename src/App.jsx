@@ -801,9 +801,16 @@ function LoginScreen({ onLogin, users = getStoredUsers() }) {
           </div>
         )}
 
-        <Button type="submit" className="w-full rounded-2xl bg-[#0F5C63] py-5 text-base font-black text-white shadow-lg hover:bg-[#0b454a]">
-          Entrar
-        </Button>
+        <Button
+  type="submit"
+  className="w-full rounded-2xl py-5 text-base font-black shadow-lg"
+  style={{
+    backgroundColor: "#0F5C63",
+    color: "#ffffff",
+  }}
+>
+  Entrar
+</Button>
 
         <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-xs text-slate-600">
           <div className="font-black text-slate-800">Acceso</div>
