@@ -910,7 +910,7 @@ export default function App() {
         lote: savedStartupLot || previous.lote || "",
       }));
 
-      if (isVerificationUser(currentUser) && !savedStartupPiece) {
+      if (isVerificationUser(currentUser) && !localStorage.getItem("startupReference")) {
         setShowProductionStart(true);
       }
 
