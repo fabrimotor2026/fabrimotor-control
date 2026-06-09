@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import * as XLSX from "xlsx";
 import { motion } from "framer-motion";
 import {
@@ -22,8 +22,6 @@ import { Card, CardContent } from "./components/ui/card";
 import {
   LineChart,
   Line,
-  BarChart,
-  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -33,6 +31,7 @@ import {
   ReferenceLine,
 } from "recharts";
 import { Button } from "./components/ui/button";
+import { supabase, isSupabaseConfigured } from "./lib/supabaseClient";
 
 import VisualHelpModalComponent from "./components/modals/VisualHelpModal";
 import EditRecordModalComponent from "./components/modals/EditRecordModal";
@@ -492,6 +491,19 @@ function today() {
   return new Date().toISOString().slice(0, 10);
 }
 
+
+function createRecordId() {
+  try {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+      return crypto.randomUUID();
+    }
+  } catch {
+    // Algunos navegadores/tablets bloquean crypto en HTTP local.
+  }
+
+  return `registro_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
 function initialForm() {
   return {
     referencia: "F-1012",
@@ -501,8 +513,6 @@ function initialForm() {
     turno: "M",
     operario: "",
     numeroPieza: "",
-    ordenFabricacion: "",
-    lote: "",
     rechazoTipo: "",
     observaciones: "",
   };
@@ -549,37 +559,157 @@ function getStoredUsers() {
 }
 
 function saveStoredUsers(users) {
-  localStorage.setItem("fabrimotor-users", JSON.stringify(users));
+  localStorage.setItem("fabrimotor-users", JSON.stringify(users || []));
 }
 
-function getLocalStorageEstimatedSizeMb(keys = []) {
-  try {
-    const bytes = keys.reduce((total, key) => {
-      const value = localStorage.getItem(key) || "";
-      return total + key.length + value.length;
-    }, 0) * 2;
 
-    return (bytes / (1024 * 1024)).toFixed(2);
-  } catch {
-    return "-";
-  }
+async function fetchSharedRecords() {
+  if (!isSupabaseConfigured || !supabase) return null;
+
+  const { data, error } = await supabase
+    .from("fabrimotor_records")
+    .select("data")
+    .order("saved_at_ms", { ascending: false });
+
+  if (error) throw error;
+
+  return (data || []).map((row) => row.data).filter(Boolean);
 }
 
-function downloadJsonFile(filename, data) {
-  const blob = new Blob([JSON.stringify(data, null, 2)], {
-    type: "application/json;charset=utf-8",
+async function upsertSharedRecord(record) {
+  if (!isSupabaseConfigured || !supabase || !record?.id) return;
+
+  const { error } = await supabase.from("fabrimotor_records").upsert({
+    id: record.id,
+    reference: record.referencia || "F-1012",
+    machine: record.maquina || "",
+    operator_user: record.usuarioSistema || "",
+    operator_name: record.operario || "",
+    piece_number: String(record.numeroPieza || ""),
+    work_order: record.ordenFabricacion || "",
+    lot: record.lote || "",
+    result: record.resultado || "",
+    saved_at_ms: record.savedAtMs || Date.now(),
+    data: record,
   });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
 
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  if (error) throw error;
 }
 
+async function deleteSharedRecord(recordId) {
+  if (!isSupabaseConfigured || !supabase || !recordId) return;
+
+  const { error } = await supabase
+    .from("fabrimotor_records")
+    .delete()
+    .eq("id", recordId);
+
+  if (error) throw error;
+}
+
+
+function normalizeSharedRole(role) {
+  const value = String(role || "").trim();
+
+  if (value === "Encargado") return "Responsable";
+  if (value === "Administracion") return "Administrativo";
+
+  return value || "Operario";
+}
+
+function normalizeUserForStorage(user) {
+  const password = user?.password || user?.pin || "";
+
+  return {
+    username: String(user?.username || "").trim(),
+    name: String(user?.name || "").trim(),
+    password,
+    role: normalizeSharedRole(user?.role),
+    pin: user?.pin || password,
+    active: user?.active !== false,
+  };
+}
+
+async function fetchSharedUsers() {
+  if (!isSupabaseConfigured || !supabase) return null;
+
+  const { data, error } = await supabase
+    .from("fabrimotor_users")
+    .select("*")
+    .order("username", { ascending: true });
+
+  if (error) throw error;
+
+  return (data || []).map((row) =>
+    normalizeUserForStorage({
+      username: row.username,
+      name: row.name,
+      password: row.password || row.pin || "",
+      role: row.role,
+      pin: row.pin || row.password || "",
+      active: row.active !== false,
+    })
+  );
+}
+
+async function upsertSharedUser(user) {
+  if (!isSupabaseConfigured || !supabase || !user?.username) return;
+
+  const normalizedUser = normalizeUserForStorage(user);
+
+  const { error } = await supabase.from("fabrimotor_users").upsert({
+    username: normalizedUser.username,
+    name: normalizedUser.name,
+    role: normalizedUser.role,
+    password: normalizedUser.password,
+    pin: normalizedUser.pin || normalizedUser.password,
+    active: normalizedUser.active,
+    updated_at: new Date().toISOString(),
+  });
+
+  if (error) throw error;
+}
+
+async function deleteSharedUser(username) {
+  if (!isSupabaseConfigured || !supabase || !username) return;
+
+  const { error } = await supabase
+    .from("fabrimotor_users")
+    .delete()
+    .eq("username", username);
+
+  if (error) throw error;
+}
+
+async function replaceSharedUsers(users = []) {
+  if (!isSupabaseConfigured || !supabase) return;
+
+  const { error: deleteError } = await supabase
+    .from("fabrimotor_users")
+    .delete()
+    .neq("username", "__never__");
+
+  if (deleteError) throw deleteError;
+
+  if (!users.length) return;
+
+  const rows = users
+    .map((user) => normalizeUserForStorage(user))
+    .filter((user) => user.username)
+    .map((user) => ({
+      username: user.username,
+      name: user.name,
+      role: user.role,
+      password: user.password,
+      pin: user.pin || user.password,
+      active: user.active,
+      updated_at: new Date().toISOString(),
+    }));
+
+  const { error } = await supabase.from("fabrimotor_users").upsert(rows);
+
+  if (error) throw error;
+}
 
 function isAdminUser(user) {
   return user?.role === "Administrador";
@@ -691,198 +821,6 @@ function LoginScreen({ onLogin, users = getStoredUsers() }) {
   );
 }
 
-
-function parseTraceabilityQr(rawText = "") {
-  const text = String(rawText || "").trim();
-  const result = {
-    raw: text,
-    of: "",
-    lote: "",
-  };
-
-  if (!text) return result;
-
-  const normalized = text
-    .replace(/\r?\n/g, ";")
-    .replace(/\|/g, ";")
-    .replace(/,/g, ";");
-
-  const ofMatch =
-    normalized.match(/(?:^|[;\s])(?:OF|ORDEN|ORDEN_FABRICACION|ORDENFABRICACION|OP|WO)\s*[:=\-]\s*([^;\s]+)/i) ||
-    normalized.match(/(?:^|[;\s])(?:ORDEN\s+FABRICACION|ORDEN\s+DE\s+FABRICACION)\s*[:=\-]\s*([^;]+)/i);
-
-  const loteMatch =
-    normalized.match(/(?:^|[;\s])(?:LOTE|LOT|BATCH)\s*[:=\-]\s*([^;\s]+)/i);
-
-  if (ofMatch?.[1]) result.of = ofMatch[1].trim();
-  if (loteMatch?.[1]) result.lote = loteMatch[1].trim();
-
-  // Si el QR solo contiene un texto simple, se usará como valor del campo solicitado.
-  return result;
-}
-
-function QrScannerModal({ title, target, onDetected, onClose }) {
-  const videoRef = useRef(null);
-  const streamRef = useRef(null);
-  const [error, setError] = useState("");
-  const [manualValue, setManualValue] = useState("");
-
-  useEffect(() => {
-    let cancelled = false;
-    let frameId = null;
-    let detector = null;
-
-    const stopCamera = () => {
-      if (frameId) {
-        cancelAnimationFrame(frameId);
-      }
-
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => track.stop());
-        streamRef.current = null;
-      }
-    };
-
-    const scanLoop = async () => {
-      if (cancelled || !videoRef.current || !detector) return;
-
-      try {
-        if (videoRef.current.readyState >= 2) {
-          const codes = await detector.detect(videoRef.current);
-
-          if (codes?.length) {
-            const value = codes[0]?.rawValue || "";
-            stopCamera();
-            onDetected(value, target);
-            return;
-          }
-        }
-      } catch {
-        // Seguimos intentando mientras la cámara esté activa.
-      }
-
-      frameId = requestAnimationFrame(scanLoop);
-    };
-
-    const startCamera = async () => {
-      try {
-        if (!("BarcodeDetector" in window)) {
-          setError(
-            "Este navegador no permite lectura QR directa. Puedes usar un lector QR externo o introducir el valor manualmente."
-          );
-          return;
-        }
-
-        detector = new window.BarcodeDetector({
-          formats: ["qr_code", "code_128", "ean_13", "ean_8", "data_matrix"],
-        });
-
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: { ideal: "environment" },
-          },
-          audio: false,
-        });
-
-        if (cancelled) {
-          stream.getTracks().forEach((track) => track.stop());
-          return;
-        }
-
-        streamRef.current = stream;
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-        scanLoop();
-      } catch (cameraError) {
-        setError(
-          "No se ha podido abrir la cámara. Revisa permisos de cámara o introduce el valor manualmente."
-        );
-      }
-    };
-
-    startCamera();
-
-    return () => {
-      cancelled = true;
-      stopCamera();
-    };
-  }, [onDetected, target]);
-
-  return (
-    <div
-      style={MODAL_OVERLAY_STYLE}
-      role="dialog"
-      aria-modal="true"
-      aria-label={title}
-    >
-      <div className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
-        <div className="mb-4 flex items-start justify-between gap-4">
-          <div>
-            <div className="inline-flex rounded-full bg-[#e6f4f4] px-3 py-1 text-xs font-black uppercase tracking-wide text-[#1f6f73] ring-1 ring-[#b8dada]">
-              Escáner QR
-            </div>
-            <h2 className="mt-3 text-2xl font-black text-slate-900">{title}</h2>
-            <p className="mt-1 text-sm text-slate-600">
-              Enfoca el código QR con la cámara trasera de la tablet.
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-full p-2 text-slate-700 hover:bg-slate-100"
-            aria-label="Cerrar escáner QR"
-          >
-            <X className="h-6 w-6" />
-          </button>
-        </div>
-
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-900">
-          <video
-            ref={videoRef}
-            className="h-72 w-full object-cover"
-            playsInline
-            muted
-          />
-        </div>
-
-        {error && (
-          <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-900">
-            {error}
-          </div>
-        )}
-
-        <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-          <div className="mb-2 text-sm font-bold text-slate-700">
-            Entrada manual / lector externo
-          </div>
-          <div className="flex gap-2">
-            <input
-              className="input"
-              value={manualValue}
-              onChange={(event) => setManualValue(event.target.value)}
-              placeholder="Escanea con lector externo o escribe el valor"
-              autoFocus
-            />
-            <Button
-              type="button"
-              className="rounded-2xl bg-blue-700 text-white"
-              onClick={() => {
-                if (manualValue.trim()) {
-                  onDetected(manualValue.trim(), target);
-                }
-              }}
-            >
-              Usar
-            </Button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-
 export default function App() {
   const [form, setForm] = useState(initialForm());
   const [values, setValues] = useState({});
@@ -898,25 +836,18 @@ export default function App() {
   const [editForm, setEditForm] = useState(null);
   const [editValues, setEditValues] = useState({});
   const [nowMs, setNowMs] = useState(Date.now());
-  const [filterReference, setFilterReference] = useState("");
-  const [filterDateFrom, setFilterDateFrom] = useState("");
-  const [filterDateTo, setFilterDateTo] = useState("");
+  const [filterDate, setFilterDate] = useState("");
   const [filterTurno, setFilterTurno] = useState("");
   const [filterOperario, setFilterOperario] = useState("");
   const [filterPieza, setFilterPieza] = useState("");
-  const [filterOF, setFilterOF] = useState("");
-  const [filterLote, setFilterLote] = useState("");
   const [filterMaquina, setFilterMaquina] = useState("");
   const [showOnlyCurrentSheet, setShowOnlyCurrentSheet] = useState(false);
   const [selectedSheetId, setSelectedSheetId] = useState("");
-  const [pdfReference, setPdfReference] = useState("");
   const [pdfDateFrom, setPdfDateFrom] = useState("");
   const [pdfDateTo, setPdfDateTo] = useState("");
   const [pdfTurno, setPdfTurno] = useState("");
   const [pdfOperario, setPdfOperario] = useState("");
   const [pdfPieza, setPdfPieza] = useState("");
-  const [pdfOF, setPdfOF] = useState("");
-  const [pdfLote, setPdfLote] = useState("");
   const [pdfMaquina, setPdfMaquina] = useState("");
   const [cpkDateFrom, setCpkDateFrom] = useState("");
   const [cpkDateTo, setCpkDateTo] = useState("");
@@ -938,6 +869,11 @@ export default function App() {
   });
 
   const [appUsers, setAppUsers] = useState(() => getStoredUsers());
+  const [databaseMode, setDatabaseMode] = useState(isSupabaseConfigured ? "Conectando..." : "Local");
+  const [lastSyncAt, setLastSyncAt] = useState("");
+  const [usersMode, setUsersMode] = useState(isSupabaseConfigured ? "Conectando..." : "Local");
+  const [lastUsersSyncAt, setLastUsersSyncAt] = useState("");
+
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [adminUserForm, setAdminUserForm] = useState({
     username: "",
@@ -950,22 +886,21 @@ export default function App() {
   const [showProductionStart, setShowProductionStart] = useState(() => {
     try {
       const storedUser = JSON.parse(localStorage.getItem("fabrimotor-current-user") || "null");
-      return isVerificationUser(storedUser) && !localStorage.getItem("startupReference");
+      return isVerificationUser(storedUser) && !localStorage.getItem("startupPiece");
     } catch {
       return false;
     }
   });
   const [startupReference, setStartupReference] = useState(() => localStorage.getItem("startupReference") || "F-1012");
+  const [startupPiece, setStartupPiece] = useState(() => localStorage.getItem("startupPiece") || "");
   const [startupOF, setStartupOF] = useState(() => localStorage.getItem("startupOF") || "");
   const [startupLot, setStartupLot] = useState(() => localStorage.getItem("startupLot") || "");
-  const [qrScannerTarget, setQrScannerTarget] = useState(null);
-  const backupFileInputRef = useRef(null);
-  const [lastBackupAt, setLastBackupAt] = useState(() => localStorage.getItem("fabrimotor-last-backup") || "");
 
   useEffect(() => {
     if (currentUser) {
       const savedStartupReference = localStorage.getItem("startupReference") || "F-1012";
       const savedStartupReferenceData = getReferenceById(savedStartupReference);
+      const savedStartupPiece = localStorage.getItem("startupPiece") || "";
       const savedStartupOF = localStorage.getItem("startupOF") || "";
       const savedStartupLot = localStorage.getItem("startupLot") || "";
 
@@ -974,7 +909,7 @@ export default function App() {
         operario: `${currentUser.username} - ${currentUser.name.trim()}`,
         referencia: savedStartupReference,
         referenciaNombre: savedStartupReferenceData.label,
-        numeroPieza: previous.numeroPieza || "",
+        numeroPieza: savedStartupPiece || previous.numeroPieza,
         ordenFabricacion: savedStartupOF || previous.ordenFabricacion || "",
         lote: savedStartupLot || previous.lote || "",
       }));
@@ -988,6 +923,116 @@ export default function App() {
       }
     }
   }, [currentUser]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadSharedRecords = async () => {
+      if (!isSupabaseConfigured) {
+        setDatabaseMode("Local");
+        return;
+      }
+
+      try {
+        setDatabaseMode("Conectando...");
+        const sharedRecords = await fetchSharedRecords();
+
+        if (cancelled || !Array.isArray(sharedRecords)) return;
+
+        setRecords(sharedRecords);
+        localStorage.setItem("f1012-zona-b", JSON.stringify(sharedRecords));
+        setDatabaseMode("Compartida");
+        setLastSyncAt(new Date().toLocaleString("es-ES"));
+      } catch (error) {
+        console.error("No se ha podido cargar Supabase:", error);
+        setDatabaseMode("Local sin conexión");
+      }
+    };
+
+    loadSharedRecords();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const refreshSharedRecords = async () => {
+    if (!isSupabaseConfigured) {
+      alert("La base de datos compartida no está configurada. La aplicación está trabajando en modo local.");
+      return;
+    }
+
+    try {
+      setDatabaseMode("Conectando...");
+      const sharedRecords = await fetchSharedRecords();
+      setRecords(sharedRecords || []);
+      localStorage.setItem("f1012-zona-b", JSON.stringify(sharedRecords || []));
+      setDatabaseMode("Compartida");
+      setLastSyncAt(new Date().toLocaleString("es-ES"));
+      alert("Datos actualizados desde la base compartida.");
+    } catch (error) {
+      console.error("Error actualizando base compartida:", error);
+      setDatabaseMode("Local sin conexión");
+      alert(`No se ha podido actualizar desde la base compartida:\n\n${error?.message || String(error)}`);
+    }
+  };
+
+
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadSharedUsers = async () => {
+      if (!isSupabaseConfigured) {
+        setUsersMode("Local");
+        return;
+      }
+
+      try {
+        setUsersMode("Conectando...");
+        const sharedUsers = await fetchSharedUsers();
+
+        if (cancelled || !Array.isArray(sharedUsers) || sharedUsers.length === 0) return;
+
+        setAppUsers(sharedUsers);
+        saveStoredUsers(sharedUsers);
+        setUsersMode("Compartidos");
+        setLastUsersSyncAt(new Date().toLocaleString("es-ES"));
+      } catch (error) {
+        console.error("No se han podido cargar usuarios de Supabase:", error);
+        setUsersMode("Local sin conexión");
+      }
+    };
+
+    loadSharedUsers();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const refreshSharedUsers = async () => {
+    if (!isSupabaseConfigured) {
+      alert("Los usuarios compartidos no están configurados. La aplicación está trabajando con usuarios locales.");
+      return;
+    }
+
+    try {
+      setUsersMode("Conectando...");
+      const sharedUsers = await fetchSharedUsers();
+      const nextUsers = Array.isArray(sharedUsers) && sharedUsers.length > 0 ? sharedUsers : getStoredUsers();
+
+      setAppUsers(nextUsers);
+      saveStoredUsers(nextUsers);
+      setUsersMode("Compartidos");
+      setLastUsersSyncAt(new Date().toLocaleString("es-ES"));
+      alert("Usuarios actualizados desde Supabase.");
+    } catch (error) {
+      console.error("Error actualizando usuarios:", error);
+      setUsersMode("Local sin conexión");
+      alert(`No se han podido actualizar los usuarios desde Supabase:\n\n${error?.message || String(error)}`);
+    }
+  };
 
   useEffect(() => {
     if (!timerStart) return;
@@ -1157,7 +1202,7 @@ export default function App() {
   const availableSheets = useMemo(() => {
     const sheetMap = new Map();
 
-    visibleRecords.forEach((record) => {
+    records.forEach((record) => {
       const sheetId = record.hojaId || buildSheetId(record);
 
       if (!sheetId) return;
@@ -1168,7 +1213,7 @@ export default function App() {
     return Array.from(sheetMap.entries())
       .map(([id, name]) => ({ id, name }))
       .sort((a, b) => b.name.localeCompare(a.name));
-  }, [visibleRecords]);
+  }, [records]);
 
   const activeSheetId = showOnlyCurrentSheet
     ? currentSheetId
@@ -1178,32 +1223,8 @@ export default function App() {
     ? currentSheetName
     : availableSheets.find((sheet) => sheet.id === selectedSheetId)?.name || "";
 
-
-  const isOwnRecord = (record) => {
-    if (!isVerificationUser(currentUser)) {
-      return true;
-    }
-
-    const currentUsername = String(currentUser?.username || "").trim();
-    const recordSystemUser = String(record?.usuarioSistema || "").trim();
-    const recordOperator = String(record?.operario || "").trim();
-
-    return (
-      recordSystemUser === currentUsername ||
-      recordOperator.startsWith(`${currentUsername} -`)
-    );
-  };
-
-  const visibleRecords = useMemo(
-    () => records.filter((record) => isOwnRecord(record)),
-    [records, currentUser]
-  );
-
-
-  const filteredRecords = visibleRecords.filter((record) => {
-    const matchReference = !filterReference || (record.referencia || "F-1012") === filterReference;
-    const matchDateFrom = !filterDateFrom || record.fecha >= filterDateFrom;
-    const matchDateTo = !filterDateTo || record.fecha <= filterDateTo;
+  const filteredRecords = records.filter((record) => {
+    const matchDate = !filterDate || record.fecha === filterDate;
     const matchTurno = !filterTurno || record.turno === filterTurno;
     const matchOperario =
       !filterOperario ||
@@ -1215,35 +1236,21 @@ export default function App() {
       String(record.numeroPieza || "")
         .toLowerCase()
         .includes(filterPieza.toLowerCase());
-    const matchOF =
-      !filterOF ||
-      String(record.ordenFabricacion || "")
-        .toLowerCase()
-        .includes(filterOF.toLowerCase());
-    const matchLote =
-      !filterLote ||
-      String(record.lote || "")
-        .toLowerCase()
-        .includes(filterLote.toLowerCase());
     const matchMaquina = !filterMaquina || record.maquina === filterMaquina;
     const recordSheetId = buildSheetId(record);
     const matchSheet = !activeSheetId || recordSheetId === activeSheetId;
 
     return (
-      matchReference &&
-      matchDateFrom &&
-      matchDateTo &&
+      matchDate &&
       matchTurno &&
       matchOperario &&
       matchPieza &&
-      matchOF &&
-      matchLote &&
       matchMaquina &&
       matchSheet
     );
   });
 
-  const rejectedRecords = visibleRecords.filter((record) => record.resultado === "NO OK");
+  const rejectedRecords = records.filter((record) => record.resultado === "NO OK");
 
 
   const getRejectedChecks = (record) => {
@@ -1337,7 +1344,59 @@ export default function App() {
     localStorage.setItem("f1012-zona-b", JSON.stringify(next));
   };
 
+  const saveRecordToSharedDatabase = async (record) => {
+    if (!isSupabaseConfigured) return;
+
+    try {
+      await upsertSharedRecord(record);
+      setDatabaseMode("Compartida");
+      setLastSyncAt(new Date().toLocaleString("es-ES"));
+    } catch (error) {
+      console.error("Error guardando en base compartida:", error);
+      setDatabaseMode("Local sin conexión");
+      alert(
+        `La verificación se ha guardado en este dispositivo, pero NO se ha podido sincronizar con la base compartida.\n\n${error?.message || String(error)}`
+      );
+    }
+  };
+
+  const saveUserToSharedDatabase = async (user) => {
+    if (!isSupabaseConfigured) {
+      alert("Usuario guardado solo localmente: Supabase no está configurado.");
+      return false;
+    }
+
+    try {
+      await upsertSharedUser(user);
+      setUsersMode("Compartidos");
+      setLastUsersSyncAt(new Date().toLocaleString("es-ES"));
+      return true;
+    } catch (error) {
+      console.error("Error guardando usuario en Supabase:", error);
+      setUsersMode("Local sin conexión");
+      alert(`Usuario guardado localmente, pero NO se ha podido sincronizar con Supabase:
+
+${error?.message || String(error)}`);
+      return false;
+    }
+  };
+
+  const deleteUserFromSharedDatabase = async (username) => {
+    if (!isSupabaseConfigured) return;
+
+    try {
+      await deleteSharedUser(username);
+      setUsersMode("Compartidos");
+      setLastUsersSyncAt(new Date().toLocaleString("es-ES"));
+    } catch (error) {
+      console.error("Error eliminando usuario en Supabase:", error);
+      setUsersMode("Local sin conexión");
+      alert(`Usuario eliminado localmente, pero no se ha podido eliminar en Supabase:\n\n${error?.message || String(error)}`);
+    }
+  };
+
   const saveRecord = () => {
+    try {
 
     if (!isVerificationUser(currentUser)) {
       alert("Solo el rol Operario puede registrar verificaciones.");
@@ -1386,25 +1445,38 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
       mediciones: values,
       savedAtMs: ahora.getTime(),
       createdAt: ahora.toISOString(),
-      id: crypto.randomUUID(),
+      id: createRecordId(),
     };
 
     const next = [row, ...records];
     saveLocal(next);
+    saveRecordToSharedDatabase(row);
     setValues({});
     setTimerStart(null);
     setElapsedSeconds(0);
     setNowMs(Date.now());
+
+    alert(`Verificación guardada correctamente.\n\nPieza: ${row.numeroPieza}\nResultado: ${row.resultado}\nBase de datos: ${isSupabaseConfigured ? "compartida" : "local"}`);
+    } catch (error) {
+      console.error("Error guardando verificación:", error);
+      alert(`Error técnico al guardar la verificación:\n\n${error?.message || String(error)}`);
+    }
   };
 
   const removeRecord = (id) => {
-    saveLocal(records.filter((r) => r.id !== id));
+    const next = records.filter((r) => r.id !== id);
+    saveLocal(next);
+
+    deleteSharedRecord(id).catch((error) => {
+      console.error("Error eliminando en base compartida:", error);
+      alert(`Registro eliminado en este dispositivo, pero no se ha podido eliminar en la base compartida:\n\n${error?.message || String(error)}`);
+    });
   };
 
   const exportExcel = () => {
     const rows = [];
 
-    filteredRecords.forEach((r) => {
+    records.forEach((r) => {
       const row = {
         Referencia: r.referenciaNombre || r.referencia || "F-1012 · Célula B",
         Fecha: r.fecha,
@@ -1415,8 +1487,6 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
         "Usuario sistema": r.usuarioSistema || "",
         "Rol usuario": r.rolUsuarioSistema ? roleLabel(r.rolUsuarioSistema) : "",
         "Número pieza": r.numeroPieza,
-        "Orden fabricación": r.ordenFabricacion || "",
-        Lote: r.lote || "",
         "Hora guardado": r.horaGuardado,
         "Control turno": r.mediciones?.controlTurno || "",
         Resultado: r.resultado,
@@ -1441,8 +1511,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
   };
 
   const getPdfFilteredRecords = () =>
-    visibleRecords.filter((record) => {
-      const matchPdfReference = !pdfReference || (record.referencia || "F-1012") === pdfReference;
+    records.filter((record) => {
       const matchFrom = !pdfDateFrom || record.fecha >= pdfDateFrom;
       const matchTo = !pdfDateTo || record.fecha <= pdfDateTo;
       const matchTurno = !pdfTurno || record.turno === pdfTurno;
@@ -1456,27 +1525,14 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
         String(record.numeroPieza || "")
           .toLowerCase()
           .includes(pdfPieza.toLowerCase());
-      const matchPdfOF =
-        !pdfOF ||
-        String(record.ordenFabricacion || "")
-          .toLowerCase()
-          .includes(pdfOF.toLowerCase());
-      const matchPdfLote =
-        !pdfLote ||
-        String(record.lote || "")
-          .toLowerCase()
-          .includes(pdfLote.toLowerCase());
       const matchMaquina = !pdfMaquina || record.maquina === pdfMaquina;
 
       return (
-        matchPdfReference &&
         matchFrom &&
         matchTo &&
         matchTurno &&
         matchOperario &&
         matchPieza &&
-        matchPdfOF &&
-        matchPdfLote &&
         matchMaquina
       );
     });
@@ -1484,12 +1540,12 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
   const pdfFilteredRecords = getPdfFilteredRecords();
 
   const recordsByMachine = (machineName) =>
-    visibleRecords.filter((record) => record.maquina === machineName);
+    records.filter((record) => record.maquina === machineName);
 
   const pdfRecordsByMachine = (machineName) =>
     pdfFilteredRecords.filter((record) => record.maquina === machineName);
 
-  const cpkFilteredRecords = visibleRecords
+  const cpkFilteredRecords = records
     .filter((record) => record.maquina === "Torno Hyundai")
     .filter((record) => {
       const matchFrom = !cpkDateFrom || record.fecha >= cpkDateFrom;
@@ -1539,8 +1595,6 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
       turno: record.turno,
       operario: record.operario,
       numeroPieza: record.numeroPieza,
-      ordenFabricacion: record.ordenFabricacion || "",
-      lote: record.lote || "",
       rechazoTipo: record.rechazoTipo || "",
       observaciones: record.observaciones || "",
     });
@@ -1567,8 +1621,6 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
     const updatedRecord = {
       ...editingRecord,
       ...editForm,
-      referencia: editingRecord.referencia,
-      referenciaNombre: editingRecord.referenciaNombre,
       hojaId: buildSheetId(editForm),
       hojaNombre: buildSheetName(editForm),
       rechazoTipo: resultado === "NO OK"
@@ -1592,10 +1644,10 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
     closeEditRecord();
   };
 
-  const currentDateRecords = visibleRecords.filter((record) => record.fecha === form.fecha);
+  const currentDateRecords = records.filter((record) => record.fecha === form.fecha);
   const currentDateOk = currentDateRecords.filter((record) => record.resultado === "OK").length;
   const currentDateNok = currentDateRecords.filter((record) => record.resultado === "NO OK").length;
-  const recentRecords = visibleRecords.slice(0, 6);
+  const recentRecords = records.slice(0, 6);
 
   const handleLogin = (user) => {
     setCurrentUser(user);
@@ -1603,11 +1655,11 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
 
     if (isVerificationUser(user)) {
       localStorage.removeItem("startupReference");
+      localStorage.removeItem("startupPiece");
       localStorage.removeItem("startupOF");
-      localStorage.removeItem("startupLot");
       setStartupReference("F-1012");
+      setStartupPiece("");
       setStartupOF("");
-      setStartupLot("");
       setShowProductionStart(true);
       setActiveView("nueva");
     } else {
@@ -1622,61 +1674,44 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
       referenciaNombre: "F-1012 · Célula B",
       numeroPieza: "",
       ordenFabricacion: "",
-      lote: "",
     }));
   };
 
   const handleLogout = () => {
     localStorage.removeItem("fabrimotor-current-user");
     localStorage.removeItem("startupReference");
+    localStorage.removeItem("startupPiece");
     localStorage.removeItem("startupOF");
-    localStorage.removeItem("startupLot");
     setStartupReference("F-1012");
+    setStartupPiece("");
     setStartupOF("");
-    setStartupLot("");
     setShowProductionStart(false);
     setCurrentUser(null);
   };
 
   const confirmProductionStart = () => {
     const selectedReferenceData = getReferenceById(startupReference);
+    const piece = startupPiece.trim();
     const of = startupOF.trim();
 
+    if (!piece) {
+      alert("Debe introducir el número de pieza.");
+      return;
+    }
+
     localStorage.setItem("startupReference", selectedReferenceData.id);
+    localStorage.setItem("startupPiece", piece);
     localStorage.setItem("startupOF", of);
 
     setForm((previous) => ({
       ...previous,
       referencia: selectedReferenceData.id,
       referenciaNombre: selectedReferenceData.label,
+      numeroPieza: piece,
       ordenFabricacion: of,
     }));
 
     setShowProductionStart(false);
-  };
-
-  const handleQrDetected = (rawValue, target) => {
-    const parsed = parseTraceabilityQr(rawValue);
-
-    if (parsed.of) {
-      setStartupOF(parsed.of);
-    }
-
-    if (parsed.lote) {
-      setStartupLot(parsed.lote);
-    }
-
-    if (!parsed.of && !parsed.lote) {
-      if (target === "of") {
-        setStartupOF(parsed.raw);
-      }
-
-      if (target === "lote") {
-        setStartupLot(parsed.raw);
-      }
-    }
-
-    setQrScannerTarget(null);
   };
 
   const adminFilteredUsers = appUsers.filter((user) => {
@@ -1701,15 +1736,17 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
       return;
     }
 
+    const userToSave = normalizeUserForStorage({ username, name, password, role });
     const exists = appUsers.some((user) => user.username === username);
     const nextUsers = exists
       ? appUsers.map((user) =>
-          user.username === username ? { username, name, password, role } : user
+          user.username === username ? userToSave : user
         )
-      : [...appUsers, { username, name, password, role }];
+      : [...appUsers, userToSave];
 
     setAppUsers(nextUsers);
     saveStoredUsers(nextUsers);
+    saveUserToSharedDatabase(userToSave);
     setAdminUserForm({
       username: "",
       name: "",
@@ -1722,7 +1759,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
     setAdminUserForm({
       username: user.username,
       name: user.name,
-      password: user.password,
+      password: user.password || user.pin || "",
       role: user.role,
     });
   };
@@ -1738,6 +1775,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
     const nextUsers = appUsers.filter((user) => user.username !== username);
     setAppUsers(nextUsers);
     saveStoredUsers(nextUsers);
+    deleteUserFromSharedDatabase(username);
   };
 
   const resetAdminUserForm = () => {
@@ -1750,435 +1788,15 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
   };
 
 
-  const backupStorageKeys = [
-    "f1012-zona-b",
-    "fabrimotor-users",
-    "startupReference",
-    "startupPiece",
-    "startupOF",
-    "startupLot",
-    "fabrimotor-last-backup",
-  ];
-
-  const databaseStatus = useMemo(() => {
-    const rejectionCount = records.filter((record) => record.resultado === "NO OK").length;
-    const uniqueOF = new Set(records.map((record) => record.ordenFabricacion).filter(Boolean)).size;
-    const uniqueLots = new Set(records.map((record) => record.lote).filter(Boolean)).size;
-
-    return {
-      records: records.length,
-      rejections: rejectionCount,
-      users: appUsers.length,
-      references: REFERENCES.length,
-      orders: uniqueOF,
-      lots: uniqueLots,
-      lastBackup: lastBackupAt || "Sin backup registrado",
-      estimatedSizeMb: getLocalStorageEstimatedSizeMb(backupStorageKeys),
-    };
-  }, [records, appUsers, lastBackupAt]);
-
-  const createDataBackup = () => {
-    const now = new Date();
-    const iso = now.toISOString();
-    const safeDate = iso.slice(0, 16).replace("T", "_").replace(":", "");
-
-    const backup = {
-      app: "FABRIMOTOR Control de Proceso",
-      version: "3.1",
-      backupCreatedAt: iso,
-      backupCreatedBy: currentUser
-        ? {
-            username: currentUser.username,
-            name: currentUser.name,
-            role: currentUser.role,
-          }
-        : null,
-      data: {
-        records,
-        users: appUsers,
-        references: REFERENCES,
-        startup: {
-          reference: localStorage.getItem("startupReference") || "",
-          piece: localStorage.getItem("startupPiece") || "",
-          of: localStorage.getItem("startupOF") || "",
-          lot: localStorage.getItem("startupLot") || "",
-        },
-      },
-    };
-
-    const backupLabel = now.toLocaleString("es-ES");
-    localStorage.setItem("fabrimotor-last-backup", backupLabel);
-    setLastBackupAt(backupLabel);
-    downloadJsonFile(`FABRIMOTOR_BACKUP_${safeDate}.json`, backup);
-  };
-
-  const restoreDataBackup = (event) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-
-    if (!file) return;
-
-    const reader = new FileReader();
-
-    reader.onload = () => {
-      try {
-        const backup = JSON.parse(String(reader.result || "{}"));
-        const backupRecords = backup?.data?.records;
-        const backupUsers = backup?.data?.users;
-
-        if (!Array.isArray(backupRecords) || !Array.isArray(backupUsers)) {
-          alert("El archivo seleccionado no parece ser un backup válido de FABRIMOTOR.");
-          return;
-        }
-
-        const backupDate = backup.backupCreatedAt
-          ? new Date(backup.backupCreatedAt).toLocaleString("es-ES")
-          : "Fecha no disponible";
-        const backupRejections = backupRecords.filter((record) => record.resultado === "NO OK").length;
-
-        const confirmed = window.confirm(
-          `Backup encontrado:\n\nFecha: ${backupDate}\nRegistros: ${backupRecords.length}\nRechazos: ${backupRejections}\nUsuarios: ${backupUsers.length}\n\nEsta acción sustituirá los datos actuales de este navegador.\n\n¿Deseas continuar?`
-        );
-
-        if (!confirmed) return;
-
-        setRecords(backupRecords);
-        localStorage.setItem("f1012-zona-b", JSON.stringify(backupRecords));
-
-        setAppUsers(backupUsers);
-        saveStoredUsers(backupUsers);
-
-        const startup = backup?.data?.startup || {};
-        localStorage.setItem("startupReference", startup.reference || "F-1012");
-        localStorage.setItem("startupPiece", startup.piece || "");
-        localStorage.setItem("startupOF", startup.of || "");
-        localStorage.setItem("startupLot", startup.lot || "");
-        setStartupReference(startup.reference || "F-1012");
-        setStartupPiece(startup.piece || "");
-        setStartupOF(startup.of || "");
-        setStartupLot(startup.lot || "");
-
-        const restoreLabel = new Date().toLocaleString("es-ES");
-        localStorage.setItem("fabrimotor-last-backup", `Restaurado: ${restoreLabel}`);
-        setLastBackupAt(`Restaurado: ${restoreLabel}`);
-
-        alert("Backup restaurado correctamente.");
-      } catch (error) {
-        alert("No se ha podido leer el backup. Comprueba que el archivo sea JSON válido.");
-      }
-    };
-
-    reader.readAsText(file, "utf-8");
-  };
-
-  const clearAllRecordsSecurely = () => {
-    const confirmation = window.prompt(
-      "Esta acción eliminará todos los registros de verificación de este navegador.\n\nPara confirmar, escribe exactamente: BORRAR TODO"
-    );
-
-    if (confirmation !== "BORRAR TODO") {
-      alert("Confirmación incorrecta. No se ha borrado ningún dato.");
-      return;
-    }
-
-    saveLocal([]);
-    alert("Todos los registros han sido eliminados. Los usuarios se mantienen.");
-  };
-
   const dashboardStats = {
-    totalRegistros: visibleRecords?.length || 0,
-    rechazos: visibleRecords?.filter?.((r) => r?.resultado === "NO OK" || Number(r?.rechazos || 0) > 0)?.length || 0,
-    operariosActivos: new Set((visibleRecords || []).map((r) => r.operario).filter(Boolean)).size,
+    totalRegistros: records?.length || 0,
+    rechazos: records?.filter?.((r) => Number(r?.rechazos || 0) > 0)?.length || 0,
+    operariosActivos: new Set((records || []).map((r) => r.operario).filter(Boolean)).size,
     ultimaVerificacion:
       records && records.length
         ? records[records.length - 1]?.fecha || "-"
         : "-",
   };
-
-
-  const spcNumericChecks = useMemo(() => {
-    const unique = [];
-
-    Object.entries(MACHINES).forEach(([machineName, machineChecks]) => {
-      machineChecks
-        .filter((check) => check.type === "number")
-        .forEach((check) => {
-          unique.push({
-            ...check,
-            machineName,
-            key: `${machineName}__${check.id}`,
-            label: `${machineName} · ${check.control}`,
-          });
-        });
-    });
-
-    return unique;
-  }, []);
-
-  const [spcReference, setSpcReference] = useState("");
-  const [spcMachine, setSpcMachine] = useState("");
-  const [spcCheckKey, setSpcCheckKey] = useState("");
-  const [spcDateFrom, setSpcDateFrom] = useState("");
-  const [spcDateTo, setSpcDateTo] = useState("");
-  const [spcTurno, setSpcTurno] = useState("");
-
-  const selectedSpcCheck = useMemo(() => {
-    const available = spcNumericChecks.filter((check) => !spcMachine || check.machineName === spcMachine);
-    return available.find((check) => check.key === spcCheckKey) || available[0] || null;
-  }, [spcNumericChecks, spcMachine, spcCheckKey]);
-
-  useEffect(() => {
-    if (selectedSpcCheck && selectedSpcCheck.key !== spcCheckKey) {
-      setSpcCheckKey(selectedSpcCheck.key);
-    }
-  }, [selectedSpcCheck, spcCheckKey]);
-
-  const spcRecords = useMemo(() => {
-    if (!selectedSpcCheck) return [];
-
-    return visibleRecords
-      .filter((record) => {
-        const matchReference = !spcReference || (record.referencia || "F-1012") === spcReference;
-        const matchMachine = record.maquina === selectedSpcCheck.machineName;
-        const matchFrom = !spcDateFrom || record.fecha >= spcDateFrom;
-        const matchTo = !spcDateTo || record.fecha <= spcDateTo;
-        const matchTurno = !spcTurno || record.turno === spcTurno;
-        const value = record.mediciones?.[selectedSpcCheck.id];
-        const numeric = Number(value);
-
-        return (
-          matchReference &&
-          matchMachine &&
-          matchFrom &&
-          matchTo &&
-          matchTurno &&
-          value !== undefined &&
-          value !== null &&
-          value !== "" &&
-          !Number.isNaN(numeric)
-        );
-      })
-      .sort((a, b) => getRecordTimeMs(a) - getRecordTimeMs(b))
-      .map((record, index) => {
-        const value = Number(record.mediciones?.[selectedSpcCheck.id]);
-        return {
-          index: index + 1,
-          value,
-          fecha: record.fecha,
-          hora: record.horaGuardado || "",
-          pieza: record.numeroPieza || "",
-          of: record.ordenFabricacion || "",
-          lote: record.lote || "",
-          operario: record.operario || "",
-          label: `${record.fecha} ${record.horaGuardado || ""} · Pieza ${record.numeroPieza || "-"}`,
-        };
-      });
-  }, [records, selectedSpcCheck, spcReference, spcDateFrom, spcDateTo, spcTurno]);
-
-  const spcStats = useMemo(() => {
-    if (!selectedSpcCheck || spcRecords.length === 0) {
-      return {
-        count: 0,
-        mean: null,
-        min: null,
-        max: null,
-        std: null,
-        cp: null,
-        cpk: null,
-        nokCount: 0,
-        trendAlert: "Sin datos suficientes",
-        trendTone: "slate",
-        lastValues: [],
-      };
-    }
-
-    const valuesOnly = spcRecords.map((item) => item.value);
-    const count = valuesOnly.length;
-    const mean = valuesOnly.reduce((sum, value) => sum + value, 0) / count;
-    const min = Math.min(...valuesOnly);
-    const max = Math.max(...valuesOnly);
-    const variance =
-      count > 1
-        ? valuesOnly.reduce((sum, value) => sum + Math.pow(value - mean, 2), 0) / (count - 1)
-        : 0;
-    const std = Math.sqrt(variance);
-    const toleranceWidth = selectedSpcCheck.max - selectedSpcCheck.min;
-    const cp = std > 0 ? toleranceWidth / (6 * std) : null;
-    const cpk =
-      std > 0
-        ? Math.min(
-            (selectedSpcCheck.max - mean) / (3 * std),
-            (mean - selectedSpcCheck.min) / (3 * std)
-          )
-        : null;
-    const nokCount = valuesOnly.filter((value) => value < selectedSpcCheck.min || value > selectedSpcCheck.max).length;
-
-    const lastValues = valuesOnly.slice(-5);
-    let trendAlert = "Proceso estable";
-    let trendTone = "green";
-
-    if (nokCount > 0) {
-      trendAlert = "Alerta: hay mediciones fuera de tolerancia";
-      trendTone = "red";
-    } else if (lastValues.length >= 5) {
-      const first = lastValues[0];
-      const last = lastValues[lastValues.length - 1];
-      const increasing = lastValues.every((value, index, array) => index === 0 || value >= array[index - 1]);
-      const decreasing = lastValues.every((value, index, array) => index === 0 || value <= array[index - 1]);
-      const upperLimitDistance = selectedSpcCheck.max - last;
-      const lowerLimitDistance = last - selectedSpcCheck.min;
-      const warningBand = toleranceWidth * 0.2;
-
-      if (increasing && last > first && upperLimitDistance <= warningBand) {
-        trendAlert = "Advertencia: tendencia hacia límite superior";
-        trendTone = "amber";
-      } else if (decreasing && last < first && lowerLimitDistance <= warningBand) {
-        trendAlert = "Advertencia: tendencia hacia límite inferior";
-        trendTone = "amber";
-      } else if (cpk !== null && cpk < 1) {
-        trendAlert = "Advertencia: Cpk inferior a 1";
-        trendTone = "amber";
-      }
-    } else if (count < 5) {
-      trendAlert = "Datos insuficientes para tendencia";
-      trendTone = "slate";
-    }
-
-    return {
-      count,
-      mean,
-      min,
-      max,
-      std,
-      cp,
-      cpk,
-      nokCount,
-      trendAlert,
-      trendTone,
-      lastValues,
-    };
-  }, [selectedSpcCheck, spcRecords]);
-
-
-  const spcMaturity = useMemo(() => {
-    const count = spcStats.count || 0;
-
-    if (count < 5) {
-      return {
-        label: "Sin datos suficientes",
-        detail: "Se necesitan al menos 5 mediciones para empezar a analizar tendencia.",
-        tone: "slate",
-        icon: "⚪",
-      };
-    }
-
-    if (count < 25) {
-      return {
-        label: "Tendencia preliminar",
-        detail: "Hay datos para detectar tendencia, pero Cp/Cpk todavía son orientativos.",
-        tone: "amber",
-        icon: "🟡",
-      };
-    }
-
-    if (count < 50) {
-      return {
-        label: "SPC válido",
-        detail: "Muestra suficiente para seguimiento de proceso en planta.",
-        tone: "green",
-        icon: "🟢",
-      };
-    }
-
-    return {
-      label: "SPC consolidado",
-      detail: "Base sólida para analizar estabilidad y capacidad del proceso.",
-      tone: "blue",
-      icon: "🔵",
-    };
-  }, [spcStats.count]);
-
-  const spcCpkStatus = useMemo(() => {
-    const cpk = spcStats.cpk;
-
-    if (cpk === null || cpk === undefined || Number.isNaN(cpk)) {
-      return {
-        label: "Sin Cpk",
-        detail: "Se necesitan más mediciones variables para calcular Cpk.",
-        tone: "slate",
-        icon: "⚪",
-      };
-    }
-
-    if (cpk >= 1.67) {
-      return {
-        label: "Excelente",
-        detail: "Cpk ≥ 1,67. Proceso muy capaz.",
-        tone: "green",
-        icon: "🟢",
-      };
-    }
-
-    if (cpk >= 1.33) {
-      return {
-        label: "Aceptable",
-        detail: "Cpk ≥ 1,33. Proceso capaz.",
-        tone: "green",
-        icon: "🟢",
-      };
-    }
-
-    if (cpk >= 1) {
-      return {
-        label: "Vigilar",
-        detail: "Cpk entre 1,00 y 1,33. Conviene seguimiento cercano.",
-        tone: "amber",
-        icon: "🟠",
-      };
-    }
-
-    return {
-      label: "Riesgo",
-      detail: "Cpk < 1,00. Riesgo de producir fuera de tolerancia.",
-      tone: "red",
-      icon: "🔴",
-    };
-  }, [spcStats.cpk]);
-
-  const spcToneClasses = {
-    slate: "border-slate-300 bg-slate-50 text-slate-700",
-    amber: "border-amber-300 bg-amber-50 text-amber-900",
-    green: "border-emerald-300 bg-emerald-50 text-emerald-800",
-    blue: "border-blue-300 bg-blue-50 text-blue-800",
-    red: "border-red-300 bg-red-50 text-red-800",
-  };
-
-  const spcHistogramData = useMemo(() => {
-    if (!selectedSpcCheck || spcRecords.length === 0) return [];
-
-    const valuesOnly = spcRecords.map((item) => item.value);
-    const minValue = Math.min(selectedSpcCheck.min, ...valuesOnly);
-    const maxValue = Math.max(selectedSpcCheck.max, ...valuesOnly);
-    const buckets = 8;
-    const step = (maxValue - minValue) / buckets || 1;
-
-    return Array.from({ length: buckets }, (_, index) => {
-      const start = minValue + index * step;
-      const end = index === buckets - 1 ? maxValue + 0.000001 : start + step;
-      const count = valuesOnly.filter((value) => value >= start && value < end).length;
-
-      return {
-        rango: `${start.toFixed(2)}-${end.toFixed(2)}`,
-        count,
-      };
-    });
-  }, [selectedSpcCheck, spcRecords]);
-
-  const formatSpcNumber = (value, decimals = 3) =>
-    value === null || value === undefined || Number.isNaN(value)
-      ? "-"
-      : Number(value).toFixed(decimals);
-
 
   if (!currentUser) {
     return <LoginScreen onLogin={handleLogin} users={appUsers} />;
@@ -2220,7 +1838,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
               </button>
             </div>
 
-            <div className="grid gap-5 overflow-auto p-6 lg:grid-cols-[340px_340px_1fr]">
+            <div className="grid gap-5 overflow-auto p-6 lg:grid-cols-[360px_1fr]">
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <h3 className="mb-4 text-lg font-black text-slate-900">
                   Usuario
@@ -2295,84 +1913,6 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
-                <h3 className="mb-4 text-lg font-black text-slate-900">
-                  GESTIÓN DE DATOS
-                </h3>
-
-                <div className="grid gap-3">
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="rounded-xl bg-white p-3">
-                      <div className="font-black text-slate-500">Registros</div>
-                      <div className="text-xl font-black text-slate-900">{databaseStatus.records}</div>
-                    </div>
-                    <div className="rounded-xl bg-white p-3">
-                      <div className="font-black text-slate-500">Rechazos</div>
-                      <div className="text-xl font-black text-red-700">{databaseStatus.rejections}</div>
-                    </div>
-                    <div className="rounded-xl bg-white p-3">
-                      <div className="font-black text-slate-500">Usuarios</div>
-                      <div className="text-xl font-black text-slate-900">{databaseStatus.users}</div>
-                    </div>
-                    <div className="rounded-xl bg-white p-3">
-                      <div className="font-black text-slate-500">Referencias</div>
-                      <div className="text-xl font-black text-slate-900">{databaseStatus.references}</div>
-                    </div>
-                    <div className="rounded-xl bg-white p-3">
-                      <div className="font-black text-slate-500">OF</div>
-                      <div className="text-xl font-black text-slate-900">{databaseStatus.orders}</div>
-                    </div>
-                    <div className="rounded-xl bg-white p-3">
-                      <div className="font-black text-slate-500">Lotes</div>
-                      <div className="text-xl font-black text-slate-900">{databaseStatus.lots}</div>
-                    </div>
-                  </div>
-
-                  <div className="rounded-xl bg-white p-3 text-xs text-slate-700">
-                    <div><strong>Último backup:</strong> {databaseStatus.lastBackup}</div>
-                    <div><strong>Tamaño estimado:</strong> {databaseStatus.estimatedSizeMb} MB</div>
-                  </div>
-
-                  <Button
-                    type="button"
-                    onClick={createDataBackup}
-                    className="rounded-2xl bg-[#1f6f73] text-white font-bold hover:bg-[#18595d]"
-                  >
-                    💾 Crear Backup
-                  </Button>
-
-                  <input
-                    ref={backupFileInputRef}
-                    type="file"
-                    accept="application/json,.json"
-                    className="hidden"
-                    onChange={restoreDataBackup}
-                  />
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => backupFileInputRef.current?.click()}
-                    className="rounded-2xl bg-white"
-                  >
-                    📂 Restaurar Backup
-                  </Button>
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={clearAllRecordsSecurely}
-                    className="rounded-2xl border-red-300 bg-red-50 font-bold text-red-700 hover:bg-red-100"
-                  >
-                    🗑️ Borrar todos los registros
-                  </Button>
-
-                  <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
-                    Antes de restaurar o borrar datos, crea siempre un backup. La restauración sustituye los datos actuales del navegador.
-                  </div>
-                </div>
-              </div>
-
               <div className="min-w-0">
                 <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
@@ -2410,7 +1950,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                           <td className="px-3 py-2 font-bold">{user.username}</td>
                           <td className="px-3 py-2">{user.name}</td>
                           <td className="px-3 py-2">{user.role}</td>
-                          <td className="px-3 py-2">{user.password}</td>
+                          <td className="px-3 py-2">{user.password || user.pin || ""}</td>
                           <td className="px-3 py-2 text-right">
                             <button
                               type="button"
@@ -2436,7 +1976,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                 </div>
 
                 <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
-                  Los cambios se guardan solo en este equipo/navegador mediante localStorage.
+                  Los cambios se guardan localmente y se sincronizan con Supabase cuando hay conexión.
                 </div>
               </div>
             </div>
@@ -2462,10 +2002,10 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                 Inicio de producción
               </div>
               <h2 className="mt-3 text-2xl font-black text-slate-900">
-                Inicio de producción
+                Introduce la pieza a registrar
               </h2>
               <p className="mt-1 text-sm text-slate-600">
-                Selecciona la referencia y, si procede, la orden de fabricación.
+                Estos datos se cargarán automáticamente en la verificación.
               </p>
             </div>
 
@@ -2478,55 +2018,37 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                 value={startupReference}
                 onChange={(event) => setStartupReference(event.target.value)}
               >
-                {REFERENCES.filter((reference) => reference.id === "F-1012").map((reference) => (
+                {REFERENCES.map((reference) => (
                   <option key={reference.id} value={reference.id}>
                     {reference.label}
                   </option>
                 ))}
               </select>
             </label>
-<label className="mb-3 block">
+
+            <label className="mb-3 block">
               <span className="mb-1.5 block text-sm font-bold text-slate-700">
-                Orden de fabricación
+                Número de pieza
               </span>
-              <div className="flex gap-2">
-                <input
-                  className="input"
-                  value={startupOF}
-                  onChange={(event) => setStartupOF(event.target.value)}
-                  placeholder="Opcional"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="rounded-2xl whitespace-nowrap"
-                  onClick={() => setQrScannerTarget("of")}
-                >
-                  QR
-                </Button>
-              </div>
+              <input
+                autoFocus
+                className="input"
+                value={startupPiece}
+                onChange={(event) => setStartupPiece(event.target.value)}
+                placeholder="Ejemplo: 123456"
+              />
             </label>
 
             <label className="mb-5 block">
               <span className="mb-1.5 block text-sm font-bold text-slate-700">
-                Lote
+                Orden de fabricación
               </span>
-              <div className="flex gap-2">
-                <input
-                  className="input"
-                  value={startupLot}
-                  onChange={(event) => setStartupLot(event.target.value)}
-                  placeholder="Opcional"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="rounded-2xl whitespace-nowrap"
-                  onClick={() => setQrScannerTarget("lote")}
-                >
-                  QR
-                </Button>
-              </div>
+              <input
+                className="input"
+                value={startupOF}
+                onChange={(event) => setStartupOF(event.target.value)}
+                placeholder="Opcional"
+              />
             </label>
 
             <Button
@@ -2539,16 +2061,8 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
           </div>
         </div>
       )}
-      {qrScannerTarget && (
-        <QrScannerModal
-          title={qrScannerTarget === "of" ? "Escanear OF" : "Escanear Lote"}
-          target={qrScannerTarget}
-          onDetected={handleQrDetected}
-          onClose={() => setQrScannerTarget(null)}
-        />
-      )}
       <div className="mx-auto flex min-h-screen max-w-[1600px] flex-col gap-4 p-4 lg:flex-row lg:p-6">
-        <aside className="rounded-3xl border border-slate-200 bg-white p-4 shadow-xl lg:sticky lg:top-6 lg:h-[calc(100vh-48px)] lg:w-72">
+        <aside className="max-h-[calc(100vh-24px)] overflow-y-auto overscroll-contain rounded-3xl border border-slate-200 bg-white p-4 shadow-xl lg:sticky lg:top-6 lg:h-[calc(100vh-48px)] lg:w-72 lg:shrink-0">
           <div className="mb-5 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div
               style={{
@@ -2579,12 +2093,11 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
             </div>
           </div>
 
-          <nav className="space-y-2">
+          <nav className="space-y-1.5">
             <SidebarButton active={activeView === "nueva"} onClick={() => setActiveView("nueva")} icon={<ClipboardCheck className="h-4 w-4" />} label="Nueva verificación" />
             <SidebarButton active={activeView === "historico"} onClick={() => setActiveView("historico")} icon={<FileText className="h-4 w-4" />} label="Histórico" badge={filteredRecords.length} />
             <SidebarButton onClick={() => setShowRejectsModal(true)} icon={<AlertTriangle className="h-4 w-4" />} label="Rechazos" badge={rejectedRecords.length} danger />
             <SidebarButton onClick={() => setShowPdfModal(true)} icon={<Printer className="h-4 w-4" />} label="PDF registros" />
-            <SidebarButton active={activeView === "spc"} onClick={() => setActiveView("spc")} icon={<TrendingUp className="h-4 w-4" />} label="Dashboard SPC" />
             <SidebarButton onClick={() => setShowCpkModal(true)} icon={<TrendingUp className="h-4 w-4" />} label="Gráfico CPK 30/40" />
             {isAdminUser(currentUser) && (
               <SidebarButton
@@ -2595,17 +2108,45 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
             )}
           </nav>
 
-          <div className="mt-5 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
+          <div className="mt-3 rounded-2xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
             <div className="font-bold">Estado actual</div>
             <div className="mt-2 grid gap-1 text-xs">
               <span>Máquina: <strong>{form.maquina}</strong></span>
               <span>Turno: <strong>{turnoLabel(form.turno)}</strong></span>
               <span>Fecha: <strong>{form.fecha}</strong></span>
-              <span>Registros visibles: <strong>{visibleRecords.length}</strong></span>
+              <span>Registros: <strong>{records.length}</strong></span>
             </div>
           </div>
 
-          <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-800">
+          <div className="mt-3 rounded-2xl border border-purple-200 bg-purple-50 p-3 text-sm text-purple-900">
+            <div className="font-bold">Base de datos</div>
+            <div className="mt-2 grid gap-1 text-xs">
+              <span>Registros: <strong>{databaseMode}</strong></span>
+              <span>Última sinc. registros: <strong>{lastSyncAt || "-"}</strong></span>
+              <span>Usuarios: <strong>{usersMode}</strong></span>
+              <span>Última sinc. usuarios: <strong>{lastUsersSyncAt || "-"}</strong></span>
+            </div>
+            <div className="mt-3 grid gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={refreshSharedRecords}
+                className="w-full rounded-2xl border-purple-300 bg-white text-purple-900 hover:bg-purple-100"
+              >
+                Actualizar registros
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={refreshSharedUsers}
+                className="w-full rounded-2xl border-purple-300 bg-white text-purple-900 hover:bg-purple-100"
+              >
+                Actualizar usuarios
+              </Button>
+            </div>
+          </div>
+
+          <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-800">
             <div className="text-xs font-black uppercase tracking-wide text-slate-500">Usuario conectado</div>
             <div className="mt-2 font-black text-slate-900">{currentUser.name}</div>
             <div className="text-xs text-slate-600">Rol: {roleLabel(currentUser.role)}</div>
@@ -2619,14 +2160,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
             </Button>
           </div>
 
-          <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-xs text-emerald-900">
-            <div className="font-black">Instalable en tablet</div>
-            <div className="mt-1">
-              Abre la app en Chrome/Edge y usa “Añadir a pantalla de inicio”.
-            </div>
-          </div>
-
-          <Button onClick={exportExcel} className="mt-4 w-full rounded-2xl bg-[#1f6f73] text-white shadow-sm">
+          <Button onClick={exportExcel} className="mt-3 w-full rounded-2xl bg-[#1f6f73] text-white shadow-sm">
             <Download className="mr-2 h-4 w-4" />
             Exportar Excel
           </Button>
@@ -2640,11 +2174,23 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
           >
             <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
               <div>
-                <div className="inline-flex items-center gap-2 rounded-full bg-[#e6f4f4] px-4 py-2 text-sm font-bold text-[#1f6f73] ring-1 ring-[#b8dada]">
-                  FABRIMOTOR · {activeView === "nueva" ? "Nueva verificación" : activeView === "spc" ? "Dashboard SPC" : "Histórico de registros"}
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="inline-flex items-center gap-2 rounded-full bg-[#e6f4f4] px-4 py-2 text-sm font-bold text-[#1f6f73] ring-1 ring-[#b8dada]">
+                    FABRIMOTOR · {activeView === "nueva" ? "Nueva verificación" : "Histórico de registros"}
+                  </div>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleLogout}
+                    className="rounded-2xl border-slate-300 bg-white text-xs font-bold text-slate-800 hover:bg-slate-100"
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Salir
+                  </Button>
                 </div>
                 <h2 className="mt-3 text-3xl font-black tracking-tight text-slate-900">
-                  {activeView === "nueva" ? "F-1012 · Control de proceso" : activeView === "spc" ? "Dashboard SPC · Tendencias y alertas" : "F-1012 · Histórico y calidad"}
+                  {activeView === "nueva" ? "F-1012 · Control de proceso" : "F-1012 · Histórico y calidad"}
                 </h2>
                 <p className="mt-1 text-slate-600">
                   Célula B · {form.maquina} · Turno {turnoLabel(form.turno)} · {form.fecha}
@@ -2751,22 +2297,6 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                     readOnly
                   />
                 </Field>
-
-                <Field label="Orden de fabricación">
-                  <input
-                    className="input bg-slate-100 font-semibold text-slate-700"
-                    value={form.ordenFabricacion || ""}
-                    readOnly
-                  />
-                </Field>
-
-                <Field label="Lote">
-                  <input
-                    className="input bg-slate-100 font-semibold text-slate-700"
-                    value={form.lote || ""}
-                    readOnly
-                  />
-                </Field>
               </div>
 
               <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
@@ -2816,8 +2346,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
 
                     <select
                       className="input"
-                      disabled={form.maquina === "Torno Hyundai" && hyundaiWaitInfo.blocked}
-                      value={values.controlTurno || ""}
+                            value={values.controlTurno || ""}
                       onChange={(e) =>
                         setValues({
                           ...values,
@@ -2967,8 +2496,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                         type="number"
                         step="0.001"
                         className="input text-slate-900 font-bold"
-                        disabled={form.maquina === "Torno Hyundai" && hyundaiWaitInfo.blocked}
-                        value={values[item.id] || ""}
+                                value={values[item.id] || ""}
                         onChange={(e) =>
                           setValues({
                             ...values,
@@ -2979,8 +2507,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                     ) : (
                       <select
                         className="input"
-                        disabled={form.maquina === "Torno Hyundai" && hyundaiWaitInfo.blocked}
-                        value={values[item.id] || ""}
+                                value={values[item.id] || ""}
                         onChange={(e) =>
                           setValues({
                             ...values,
@@ -3041,7 +2568,6 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
 
               <Button
                 onClick={saveRecord}
-                disabled={form.maquina === "Torno Hyundai" && hyundaiWaitInfo.blocked}
                 className="w-full rounded-2xl py-6 text-base shadow-md"
               >
                 <Save className="mr-2 h-5 w-5" />
@@ -3115,240 +2641,6 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
 
           )}
 
-
-          {activeView === "spc" && (
-          <Card className="rounded-3xl border-0 shadow-lg">
-            <CardContent className="space-y-5 p-6">
-              <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-                <div>
-                  <h2 className="text-2xl font-black text-slate-900">Dashboard SPC</h2>
-                  <p className="mt-1 text-sm text-slate-600">
-                    Control estadístico del proceso, tendencia de cotas críticas y alertas preventivas.
-                  </p>
-                </div>
-
-                <div
-                  className={`rounded-2xl border px-4 py-3 text-sm font-black ${
-                    spcStats.trendTone === "red"
-                      ? "border-red-300 bg-red-50 text-red-800"
-                      : spcStats.trendTone === "amber"
-                      ? "border-amber-300 bg-amber-50 text-amber-900"
-                      : spcStats.trendTone === "green"
-                      ? "border-emerald-300 bg-emerald-50 text-emerald-800"
-                      : "border-slate-300 bg-slate-50 text-slate-700"
-                  }`}
-                >
-                  <div>{spcStats.trendAlert}</div>
-                  <div className="mt-1 text-xs font-semibold opacity-80">
-                    Basado en las últimas 5 mediciones y límites de tolerancia.
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <div className="mb-3 text-sm font-black uppercase tracking-wide text-slate-600">
-                  Filtros SPC
-                </div>
-
-                <div className="grid gap-3 md:grid-cols-7">
-                  <Field label="Referencia">
-                    <select
-                      className="input"
-                      value={spcReference}
-                      onChange={(event) => setSpcReference(event.target.value)}
-                    >
-                      <option value="">Todas</option>
-                      {REFERENCES.map((reference) => (
-                        <option key={reference.id} value={reference.id}>
-                          {reference.label}
-                        </option>
-                      ))}
-                    </select>
-                  </Field>
-
-                  <Field label="Máquina">
-                    <select
-                      className="input"
-                      value={spcMachine}
-                      onChange={(event) => {
-                        setSpcMachine(event.target.value);
-                        setSpcCheckKey("");
-                      }}
-                    >
-                      <option value="">Todas</option>
-                      {Object.keys(MACHINES).map((machine) => (
-                        <option key={machine} value={machine}>
-                          {machine}
-                        </option>
-                      ))}
-                    </select>
-                  </Field>
-
-                  <Field label="Cota">
-                    <select
-                      className="input"
-                      value={selectedSpcCheck?.key || ""}
-                      onChange={(event) => setSpcCheckKey(event.target.value)}
-                    >
-                      {spcNumericChecks
-                        .filter((check) => !spcMachine || check.machineName === spcMachine)
-                        .map((check) => (
-                          <option key={check.key} value={check.key}>
-                            {check.control}
-                          </option>
-                        ))}
-                    </select>
-                  </Field>
-
-                  <Field label="Desde">
-                    <input type="date" className="input" value={spcDateFrom} onChange={(event) => setSpcDateFrom(event.target.value)} />
-                  </Field>
-
-                  <Field label="Hasta">
-                    <input type="date" className="input" value={spcDateTo} onChange={(event) => setSpcDateTo(event.target.value)} />
-                  </Field>
-
-                  <Field label="Turno">
-                    <select className="input" value={spcTurno} onChange={(event) => setSpcTurno(event.target.value)}>
-                      <option value="">Todos</option>
-                      <option value="M">M (Mañana)</option>
-                      <option value="T">T (Tarde)</option>
-                      <option value="N">N (Noche)</option>
-                    </select>
-                  </Field>
-
-                  <div className="flex items-end">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-full rounded-2xl"
-                      onClick={() => {
-                        setSpcReference("");
-                        setSpcMachine("");
-                        setSpcCheckKey("");
-                        setSpcDateFrom("");
-                        setSpcDateTo("");
-                        setSpcTurno("");
-                      }}
-                    >
-                      Limpiar
-                    </Button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
-                <DashboardKpi label="Muestras" value={spcStats.count} tone="blue" />
-                <DashboardKpi label="Media" value={formatSpcNumber(spcStats.mean)} tone="slate" />
-                <DashboardKpi label="Desv. típ." value={formatSpcNumber(spcStats.std)} tone="slate" />
-                <DashboardKpi label="Cp" value={formatSpcNumber(spcStats.cp, 2)} tone={spcStats.cp !== null && spcStats.cp < 1 ? "red" : "green"} />
-                <DashboardKpi label="Cpk" value={formatSpcNumber(spcStats.cpk, 2)} tone={spcStats.cpk !== null && spcStats.cpk < 1 ? "red" : "green"} />
-                <DashboardKpi label="NOK" value={spcStats.nokCount} tone={spcStats.nokCount > 0 ? "red" : "green"} />
-              </div>
-
-              <div className="grid gap-4 xl:grid-cols-2">
-                <div className={`rounded-2xl border p-5 shadow-sm ${spcToneClasses[spcMaturity.tone] || spcToneClasses.slate}`}>
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <div className="text-xs font-black uppercase tracking-wide opacity-80">Madurez SPC</div>
-                      <div className="mt-2 text-2xl font-black">{spcMaturity.icon} {spcMaturity.label}</div>
-                      <div className="mt-1 text-sm font-semibold opacity-90">{spcMaturity.detail}</div>
-                    </div>
-                    <div className="rounded-full bg-white/70 px-3 py-1 text-sm font-black">{spcStats.count} muestras</div>
-                  </div>
-
-                  <div className="mt-4 grid gap-2 text-xs font-bold sm:grid-cols-4">
-                    <div className={spcStats.count < 5 ? "rounded-xl bg-white/80 p-2 ring-2 ring-current" : "rounded-xl bg-white/50 p-2"}>⚪ 0-4<br />Sin datos</div>
-                    <div className={spcStats.count >= 5 && spcStats.count < 25 ? "rounded-xl bg-white/80 p-2 ring-2 ring-current" : "rounded-xl bg-white/50 p-2"}>🟡 5-24<br />Preliminar</div>
-                    <div className={spcStats.count >= 25 && spcStats.count < 50 ? "rounded-xl bg-white/80 p-2 ring-2 ring-current" : "rounded-xl bg-white/50 p-2"}>🟢 25-49<br />Válido</div>
-                    <div className={spcStats.count >= 50 ? "rounded-xl bg-white/80 p-2 ring-2 ring-current" : "rounded-xl bg-white/50 p-2"}>🔵 ≥50<br />Consolidado</div>
-                  </div>
-                </div>
-
-                <div className={`rounded-2xl border p-5 shadow-sm ${spcToneClasses[spcCpkStatus.tone] || spcToneClasses.slate}`}>
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <div className="text-xs font-black uppercase tracking-wide opacity-80">Capacidad del proceso</div>
-                      <div className="mt-2 text-2xl font-black">{spcCpkStatus.icon} {spcCpkStatus.label}</div>
-                      <div className="mt-1 text-sm font-semibold opacity-90">{spcCpkStatus.detail}</div>
-                    </div>
-                    <div className="rounded-full bg-white/70 px-3 py-1 text-sm font-black">Cpk {formatSpcNumber(spcStats.cpk, 2)}</div>
-                  </div>
-
-                  <div className="mt-4 grid gap-2 text-xs font-bold sm:grid-cols-4">
-                    <div className={spcStats.cpk !== null && spcStats.cpk >= 1.67 ? "rounded-xl bg-white/80 p-2 ring-2 ring-current" : "rounded-xl bg-white/50 p-2"}>🟢 &gt;1,67<br />Excelente</div>
-                    <div className={spcStats.cpk !== null && spcStats.cpk >= 1.33 && spcStats.cpk < 1.67 ? "rounded-xl bg-white/80 p-2 ring-2 ring-current" : "rounded-xl bg-white/50 p-2"}>🟢 &gt;1,33<br />Aceptable</div>
-                    <div className={spcStats.cpk !== null && spcStats.cpk >= 1 && spcStats.cpk < 1.33 ? "rounded-xl bg-white/80 p-2 ring-2 ring-current" : "rounded-xl bg-white/50 p-2"}>🟠 1-1,33<br />Vigilar</div>
-                    <div className={spcStats.cpk !== null && spcStats.cpk < 1 ? "rounded-xl bg-white/80 p-2 ring-2 ring-current" : "rounded-xl bg-white/50 p-2"}>🔴 &lt;1<br />Riesgo</div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid gap-5 xl:grid-cols-[1.5fr_1fr]">
-                <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                  <div className="mb-3">
-                    <div className="text-lg font-black text-slate-900">Tendencia de mediciones</div>
-                    <div className="text-xs text-slate-500">
-                      {selectedSpcCheck ? `${selectedSpcCheck.control} · Límites ${selectedSpcCheck.min} / ${selectedSpcCheck.max}` : "Selecciona una cota numérica"}
-                    </div>
-                  </div>
-
-                  <div className="h-[420px]">
-                    {spcRecords.length === 0 ? (
-                      <div className="flex h-full items-center justify-center rounded-2xl border border-dashed border-slate-300 text-slate-500">
-                        Sin datos para los filtros seleccionados.
-                      </div>
-                    ) : (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={spcRecords}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="index" />
-                          <YAxis domain={["auto", "auto"]} />
-                          <Tooltip formatter={(value) => [value, "Medición"]} />
-                          <Legend />
-                          {selectedSpcCheck && (
-                            <>
-                              <ReferenceLine y={selectedSpcCheck.max} label="LS" strokeDasharray="4 4" />
-                              <ReferenceLine y={selectedSpcCheck.min} label="LI" strokeDasharray="4 4" />
-                            </>
-                          )}
-                          <Line type="monotone" dataKey="value" name="Valor" strokeWidth={3} dot />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    )}
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                  <div className="mb-3">
-                    <div className="text-lg font-black text-slate-900">Distribución</div>
-                    <div className="text-xs text-slate-500">Histograma simple por rangos.</div>
-                  </div>
-
-                  <div className="h-[420px]">
-                    {spcHistogramData.length === 0 ? (
-                      <div className="flex h-full items-center justify-center rounded-2xl border border-dashed border-slate-300 text-slate-500">
-                        Sin datos.
-                      </div>
-                    ) : (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={spcHistogramData}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="rango" angle={-20} textAnchor="end" height={80} />
-                          <YAxis allowDecimals={false} />
-                          <Tooltip />
-                          <Bar dataKey="count" name="Muestras" />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          )}
-
-
           {activeView === "historico" && (
           <Card className="rounded-3xl border-0 shadow-lg">
             <CardContent className="p-6">
@@ -3398,12 +2690,6 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                 </div>
               </div>
 
-                {isVerificationUser(currentUser) && (
-                  <div className="mb-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm font-bold text-amber-900">
-                    Vista restringida: solo puedes consultar los registros realizados con tu usuario.
-                  </div>
-                )}
-
               <div className="mb-4 rounded-2xl bg-slate-50 p-4">
                 <div className="mb-3 rounded-2xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
                   <div className="font-bold">
@@ -3417,37 +2703,13 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                   </div>
                 </div>
 
-                <div className="grid gap-3 md:grid-cols-10">
-                  <Field label="Referencia">
-                    <select
-                      className="input"
-                      value={filterReference}
-                      onChange={(e) => setFilterReference(e.target.value)}
-                    >
-                      <option value="">Todas las referencias</option>
-                      {REFERENCES.map((reference) => (
-                        <option key={reference.id} value={reference.id}>
-                          {reference.label}
-                        </option>
-                      ))}
-                    </select>
-                  </Field>
-
-                  <Field label="Desde fecha">
+                <div className="grid gap-3 md:grid-cols-6">
+                  <Field label="Filtrar por fecha">
                     <input
                       type="date"
                       className="input"
-                      value={filterDateFrom}
-                      onChange={(e) => setFilterDateFrom(e.target.value)}
-                    />
-                  </Field>
-
-                  <Field label="Hasta fecha">
-                    <input
-                      type="date"
-                      className="input"
-                      value={filterDateTo}
-                      onChange={(e) => setFilterDateTo(e.target.value)}
+                      value={filterDate}
+                      onChange={(e) => setFilterDate(e.target.value)}
                     />
                   </Field>
 
@@ -3464,16 +2726,14 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                     </select>
                   </Field>
 
-                  {!isVerificationUser(currentUser) && (
-                    <Field label="Nº Operario">
-                      <input
-                        className="input"
-                        placeholder="Ej. 105"
-                        value={filterOperario}
-                        onChange={(e) => setFilterOperario(e.target.value)}
-                      />
-                    </Field>
-                  )}
+                  <Field label="Nº Operario">
+                    <input
+                      className="input"
+                      placeholder="Ej. 105"
+                      value={filterOperario}
+                      onChange={(e) => setFilterOperario(e.target.value)}
+                    />
+                  </Field>
 
                   <Field label="Nº Pieza">
                     <input
@@ -3481,24 +2741,6 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                       placeholder="Ej. 64"
                       value={filterPieza}
                       onChange={(e) => setFilterPieza(e.target.value)}
-                    />
-                  </Field>
-
-                  <Field label="OF">
-                    <input
-                      className="input"
-                      placeholder="Orden fabricación"
-                      value={filterOF}
-                      onChange={(e) => setFilterOF(e.target.value)}
-                    />
-                  </Field>
-
-                  <Field label="Lote">
-                    <input
-                      className="input"
-                      placeholder="Lote"
-                      value={filterLote}
-                      onChange={(e) => setFilterLote(e.target.value)}
                     />
                   </Field>
 
@@ -3517,7 +2759,6 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                     </select>
                   </Field>
 
-                  <div className="hidden">
                   <Field label="Hoja anterior">
                     <select
                       className="input"
@@ -3535,7 +2776,6 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                       ))}
                     </select>
                   </Field>
-                  </div>
 
                   <div className="flex items-end">
                     <Button className="w-full rounded-2xl" onClick={() => {}}>
@@ -3562,14 +2802,10 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                       variant="outline"
                       className="w-full rounded-2xl"
                       onClick={() => {
-                        setFilterReference("");
-                        setFilterDateFrom("");
-                        setFilterDateTo("");
+                        setFilterDate("");
                         setFilterTurno("");
                         setFilterOperario("");
                         setFilterPieza("");
-                        setFilterOF("");
-                        setFilterLote("");
                         setFilterMaquina("");
                         setSelectedSheetId("");
                         setShowOnlyCurrentSheet(false);
@@ -3583,18 +2819,15 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
 
               <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
                 <div className="max-h-[760px] overflow-auto">
-                  <table className="w-full min-w-[1100px] text-left text-sm">
+                  <table className="w-full min-w-[800px] text-left text-sm">
                     <thead className="sticky top-0 bg-slate-700 text-white">
                       <tr>
-                        <th className="px-4 py-3">Referencia</th>
                         <th className="px-4 py-3">Fecha</th>
                         <th className="px-4 py-3">Máquina</th>
                         <th className="px-4 py-3">Hoja</th>
                         <th className="px-4 py-3">Operario</th>
                         <th className="px-4 py-3">Turno</th>
                         <th className="px-4 py-3">Número pieza</th>
-                        <th className="px-4 py-3">OF</th>
-                        <th className="px-4 py-3">Lote</th>
                         <th className="px-4 py-3">Hora</th>
                         <th className="px-4 py-3">Resultado</th>
                         <th className="px-4 py-3">Acciones</th>
@@ -3605,7 +2838,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                       {filteredRecords.length === 0 ? (
                         <tr>
                           <td
-                            colSpan="12"
+                            colSpan="9"
                             className="px-4 py-10 text-center text-slate-500"
                           >
                             Todavía no hay registros guardados.
@@ -3614,15 +2847,12 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                       ) : (
                         filteredRecords.map((r) => (
                           <tr key={r.id} className="border-t border-slate-800">
-                            <td className="px-4 py-3 font-bold">{r.referenciaNombre || getReferenceById(r.referencia).label}</td>
                             <td className="px-4 py-3">{r.fecha}</td>
                             <td className="px-4 py-3">{r.maquina}</td>
-                            <td className="px-4 py-3 text-xs">{buildReportSheetName(r) || r.hojaNombre}</td>
+                            <td className="px-4 py-3 text-xs">{buildSheetName(r) || r.hojaNombre}</td>
                             <td className="px-4 py-3">{r.operario}</td>
                             <td className="px-4 py-3">{turnoLabel(r.turno)}</td>
                             <td className="px-4 py-3">{r.numeroPieza}</td>
-                            <td className="px-4 py-3">{r.ordenFabricacion || "-"}</td>
-                            <td className="px-4 py-3">{r.lote || "-"}</td>
                             <td className="px-4 py-3">{r.horaGuardado}</td>
                             <td className="px-4 py-3">
                               <span
@@ -3745,22 +2975,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                 Filtros para PDF registros · {pdfFilteredRecords.length} registros encontrados
               </div>
 
-              <div className="grid gap-3 md:grid-cols-8">
-                <Field label="Referencia">
-                  <select
-                    className="input"
-                    value={pdfReference}
-                    onChange={(e) => setPdfReference(e.target.value)}
-                  >
-                    <option value="">Todas las referencias</option>
-                    {REFERENCES.map((reference) => (
-                      <option key={reference.id} value={reference.id}>
-                        {reference.label}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-
+              <div className="grid gap-3 md:grid-cols-6">
                 <Field label="Desde fecha">
                   <input
                     type="date"
@@ -3792,16 +3007,14 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                   </select>
                 </Field>
 
-                {!isVerificationUser(currentUser) && (
-                  <Field label="Nº Operario">
-                    <input
-                      className="input"
-                      placeholder="Ej. 105"
-                      value={pdfOperario}
-                      onChange={(e) => setPdfOperario(e.target.value)}
-                    />
-                  </Field>
-                )}
+                <Field label="Nº Operario">
+                  <input
+                    className="input"
+                    placeholder="Ej. 105"
+                    value={pdfOperario}
+                    onChange={(e) => setPdfOperario(e.target.value)}
+                  />
+                </Field>
 
                 <Field label="Nº Pieza">
                   <input
@@ -3809,24 +3022,6 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                     placeholder="Ej. 64"
                     value={pdfPieza}
                     onChange={(e) => setPdfPieza(e.target.value)}
-                  />
-                </Field>
-
-                <Field label="OF">
-                  <input
-                    className="input"
-                    placeholder="Orden fabricación"
-                    value={pdfOF}
-                    onChange={(e) => setPdfOF(e.target.value)}
-                  />
-                </Field>
-
-                <Field label="Lote">
-                  <input
-                    className="input"
-                    placeholder="Lote"
-                    value={pdfLote}
-                    onChange={(e) => setPdfLote(e.target.value)}
                   />
                 </Field>
 
@@ -3851,14 +3046,11 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                   variant="outline"
                   className="rounded-xl"
                   onClick={() => {
-                    setPdfReference("");
                     setPdfDateFrom("");
                     setPdfDateTo("");
                     setPdfTurno("");
                     setPdfOperario("");
                     setPdfPieza("");
-                    setPdfOF("");
-                    setPdfLote("");
                     setPdfMaquina("");
                   }}
                 >
@@ -4015,6 +3207,11 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
 
         tbody td {
           color: #0f172a;
+        }
+
+        aside {
+          scrollbar-width: thin;
+          -webkit-overflow-scrolling: touch;
         }
 
         @media print {
@@ -4413,8 +3610,6 @@ function RejectsModal({ records, getRejectedChecks, buildSheetName, onClose }) {
   const [rejectTurno, setRejectTurno] = useState("");
   const [rejectOperario, setRejectOperario] = useState("");
   const [rejectPieza, setRejectPieza] = useState("");
-  const [rejectOF, setRejectOF] = useState("");
-  const [rejectLote, setRejectLote] = useState("");
   const [rejectMaquina, setRejectMaquina] = useState("");
 
   const filteredRejects = records.filter((record) => {
@@ -4431,16 +3626,6 @@ function RejectsModal({ records, getRejectedChecks, buildSheetName, onClose }) {
       String(record.numeroPieza || "")
         .toLowerCase()
         .includes(rejectPieza.toLowerCase());
-    const matchRejectOF =
-      !rejectOF ||
-      String(record.ordenFabricacion || "")
-        .toLowerCase()
-        .includes(rejectOF.toLowerCase());
-    const matchRejectLote =
-      !rejectLote ||
-      String(record.lote || "")
-        .toLowerCase()
-        .includes(rejectLote.toLowerCase());
     const matchMaquina = !rejectMaquina || record.maquina === rejectMaquina;
 
     return (
@@ -4449,8 +3634,6 @@ function RejectsModal({ records, getRejectedChecks, buildSheetName, onClose }) {
       matchTurno &&
       matchOperario &&
       matchPieza &&
-      matchRejectOF &&
-      matchRejectLote &&
       matchMaquina
     );
   });
@@ -4497,8 +3680,6 @@ function RejectsModal({ records, getRejectedChecks, buildSheetName, onClose }) {
                   setRejectTurno("");
                   setRejectOperario("");
                   setRejectPieza("");
-                  setRejectOF("");
-                  setRejectLote("");
                   setRejectMaquina("");
                 }}
               >
@@ -4506,7 +3687,7 @@ function RejectsModal({ records, getRejectedChecks, buildSheetName, onClose }) {
               </Button>
             </div>
 
-            <div className="grid gap-3 md:grid-cols-8">
+            <div className="grid gap-3 md:grid-cols-6">
               <Field label="Desde fecha">
                 <input
                   type="date"
@@ -4556,24 +3737,6 @@ function RejectsModal({ records, getRejectedChecks, buildSheetName, onClose }) {
                 />
               </Field>
 
-              <Field label="OF">
-                <input
-                  className="input"
-                  placeholder="Orden fabricación"
-                  value={rejectOF}
-                  onChange={(e) => setRejectOF(e.target.value)}
-                />
-              </Field>
-
-              <Field label="Lote">
-                <input
-                  className="input"
-                  placeholder="Lote"
-                  value={rejectLote}
-                  onChange={(e) => setRejectLote(e.target.value)}
-                />
-              </Field>
-
               <Field label="Máquina">
                 <select
                   className="input"
@@ -4606,8 +3769,6 @@ function RejectsModal({ records, getRejectedChecks, buildSheetName, onClose }) {
                   <th className="border border-red-200 px-3 py-2 text-left">Turno</th>
                   <th className="border border-red-200 px-3 py-2 text-left">Operario</th>
                   <th className="border border-red-200 px-3 py-2 text-left">Nº pieza</th>
-                  <th className="border border-red-200 px-3 py-2 text-left">OF</th>
-                  <th className="border border-red-200 px-3 py-2 text-left">Lote</th>
                   <th className="border border-red-200 px-3 py-2 text-left">Cotas NO OK</th>
                   <th className="border border-red-200 px-3 py-2 text-left">Tipo de error</th>
                   <th className="border border-red-200 px-3 py-2 text-left">Observaciones</th>
@@ -4631,8 +3792,6 @@ function RejectsModal({ records, getRejectedChecks, buildSheetName, onClose }) {
                       <td className="border border-red-100 px-3 py-2 font-bold">
                         {record.numeroPieza}
                       </td>
-                      <td className="border border-red-100 px-3 py-2">{record.ordenFabricacion || "-"}</td>
-                      <td className="border border-red-100 px-3 py-2">{record.lote || "-"}</td>
                       <td className="border border-red-100 px-3 py-2">
                         {rejectedChecks.length === 0 ? (
                           <span className="font-semibold text-red-700">Resultado NO OK</span>
