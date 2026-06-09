@@ -50,11 +50,11 @@ const USER_ROLES = [
 ];
 
 const REFERENCES = [
-  { id: "F-1012", label: "F-1012 · Célula B", celula: "Célula B" },
-  { id: "F-1013", label: "F-1013 · Célula A", celula: "Célula A" },
-  { id: "F-1025", label: "F-1025 · Célula A", celula: "Célula A" },
-  { id: "F-1026", label: "F-1026 · Célula A", celula: "Célula A" },
-  { id: "F-1029", label: "F-1029 · Célula A", celula: "Célula A" },
+  { id: "F-1012", label: "F-1012  Célula B", celula: "Célula B" },
+  { id: "F-1013", label: "F-1013  Célula A", celula: "Célula A" },
+  { id: "F-1025", label: "F-1025  Célula A", celula: "Célula A" },
+  { id: "F-1026", label: "F-1026  Célula A", celula: "Célula A" },
+  { id: "F-1029", label: "F-1029  Célula A", celula: "Célula A" },
 ];
 
 function getReferenceById(referenceId) {
@@ -507,7 +507,7 @@ function createRecordId() {
 function initialForm() {
   return {
     referencia: "F-1012",
-    referenciaNombre: "F-1012 · Célula B",
+    referenciaNombre: "F-1012  Célula B",
     maquina: "Torno Hyundai",
     fecha: today(),
     turno: "M",
@@ -558,10 +558,6 @@ function getStoredUsers() {
   }
 }
 
-function saveStoredUsers(users) {
-  localStorage.setItem("fabrimotor-users", JSON.stringify(users || []));
-}
-
 
 async function fetchSharedRecords() {
   if (!isSupabaseConfigured || !supabase) return null;
@@ -608,28 +604,6 @@ async function deleteSharedRecord(recordId) {
 }
 
 
-function normalizeSharedRole(role) {
-  const value = String(role || "").trim();
-
-  if (value === "Encargado") return "Responsable";
-  if (value === "Administracion") return "Administrativo";
-
-  return value || "Operario";
-}
-
-function normalizeUserForStorage(user) {
-  const password = user?.password || user?.pin || "";
-
-  return {
-    username: String(user?.username || "").trim(),
-    name: String(user?.name || "").trim(),
-    password,
-    role: normalizeSharedRole(user?.role),
-    pin: user?.pin || password,
-    active: user?.active !== false,
-  };
-}
-
 async function fetchSharedUsers() {
   if (!isSupabaseConfigured || !supabase) return null;
 
@@ -640,30 +614,24 @@ async function fetchSharedUsers() {
 
   if (error) throw error;
 
-  return (data || []).map((row) =>
-    normalizeUserForStorage({
-      username: row.username,
-      name: row.name,
-      password: row.password || row.pin || "",
-      role: row.role,
-      pin: row.pin || row.password || "",
-      active: row.active !== false,
-    })
-  );
+  return (data || []).map((row) => ({
+    username: row.username,
+    name: row.name,
+    role: row.role,
+    pin: row.pin || "",
+    active: row.active !== false,
+  }));
 }
 
 async function upsertSharedUser(user) {
   if (!isSupabaseConfigured || !supabase || !user?.username) return;
 
-  const normalizedUser = normalizeUserForStorage(user);
-
   const { error } = await supabase.from("fabrimotor_users").upsert({
-    username: normalizedUser.username,
-    name: normalizedUser.name,
-    role: normalizedUser.role,
-    password: normalizedUser.password,
-    pin: normalizedUser.pin || normalizedUser.password,
-    active: normalizedUser.active,
+    username: String(user.username).trim(),
+    name: String(user.name || "").trim(),
+    role: user.role || "Operario",
+    pin: user.pin || "",
+    active: user.active !== false,
     updated_at: new Date().toISOString(),
   });
 
@@ -693,18 +661,14 @@ async function replaceSharedUsers(users = []) {
 
   if (!users.length) return;
 
-  const rows = users
-    .map((user) => normalizeUserForStorage(user))
-    .filter((user) => user.username)
-    .map((user) => ({
-      username: user.username,
-      name: user.name,
-      role: user.role,
-      password: user.password,
-      pin: user.pin || user.password,
-      active: user.active,
-      updated_at: new Date().toISOString(),
-    }));
+  const rows = users.map((user) => ({
+    username: String(user.username || "").trim(),
+    name: String(user.name || "").trim(),
+    role: user.role || "Operario",
+    pin: user.pin || "",
+    active: user.active !== false,
+    updated_at: new Date().toISOString(),
+  })).filter((user) => user.username);
 
   const { error } = await supabase.from("fabrimotor_users").upsert(rows);
 
@@ -757,14 +721,20 @@ function LoginScreen({ onLogin, users = getStoredUsers() }) {
         <img
           src="/logo-fabrimotor.png"
           alt="FabriMotor"
-          className="mb-8 h-20 w-auto object-contain"
+          className="mb-8 h-16 w-auto object-contain"
         />
 
         <div className="mb-6">
-<h1 className="mt-4 text-3xl font-black tracking-tight text-slate-900">
-            CONTROL DE PROCESO
+          <div className="inline-flex rounded-full bg-[#e6f4f4] px-3 py-1 text-xs font-black uppercase tracking-wide text-[#1f6f73] ring-1 ring-[#b8dada]">
+            Acceso seguro
+          </div>
+          <h1 className="mt-4 text-3xl font-black tracking-tight text-slate-900">
+            Sistema de verificaciones
           </h1>
-</div>
+          <p className="mt-2 text-sm text-slate-600">
+            Introduce usuario y contraseña para acceder al control F-1012  Célula  B.
+          </p>
+        </div>
 
         <label className="mb-4 block">
           <span className="mb-1.5 block text-sm font-bold text-slate-700">Usuario</span>
@@ -800,11 +770,7 @@ function LoginScreen({ onLogin, users = getStoredUsers() }) {
           </div>
         )}
 
-        <Button
-          type="submit"
-          className="w-full rounded-2xl py-5 text-base font-black shadow-lg"
-          style={{ backgroundColor: "#0F5C63", color: "#ffffff" }}
-        >
+        <Button type="submit" className="w-full rounded-2xl bg-blue-700 py-5 text-base font-black text-white shadow-lg">
           Entrar
         </Button>
 
@@ -884,12 +850,13 @@ export default function App() {
   const [showProductionStart, setShowProductionStart] = useState(() => {
     try {
       const storedUser = JSON.parse(localStorage.getItem("fabrimotor-current-user") || "null");
-      return isVerificationUser(storedUser) && !localStorage.getItem("startupReference");
+      return isVerificationUser(storedUser) && !localStorage.getItem("startupPiece");
     } catch {
       return false;
     }
   });
   const [startupReference, setStartupReference] = useState(() => localStorage.getItem("startupReference") || "F-1012");
+  const [ setStartupPiece] = useState(() => localStorage.getItem("startupPiece") || "");
   const [startupOF, setStartupOF] = useState(() => localStorage.getItem("startupOF") || "");
   const [startupLot, setStartupLot] = useState(() => localStorage.getItem("startupLot") || "");
 
@@ -897,7 +864,8 @@ export default function App() {
     if (currentUser) {
       const savedStartupReference = localStorage.getItem("startupReference") || "F-1012";
       const savedStartupReferenceData = getReferenceById(savedStartupReference);
-            const savedStartupOF = localStorage.getItem("startupOF") || "";
+      const savedStartupPiece = localStorage.getItem("startupPiece") || "";
+      const savedStartupOF = localStorage.getItem("startupOF") || "";
       const savedStartupLot = localStorage.getItem("startupLot") || "";
 
       setForm((previous) => ({
@@ -905,12 +873,12 @@ export default function App() {
         operario: `${currentUser.username} - ${currentUser.name.trim()}`,
         referencia: savedStartupReference,
         referenciaNombre: savedStartupReferenceData.label,
-        numeroPieza: previous.numeroPieza || "",
+        numeroPieza: savedStartupPiece || previous.numeroPieza,
         ordenFabricacion: savedStartupOF || previous.ordenFabricacion || "",
         lote: savedStartupLot || previous.lote || "",
       }));
 
-      if (isVerificationUser(currentUser) && !localStorage.getItem("startupReference")) {
+      if (isVerificationUser(currentUser) && !savedStartupPiece) {
         setShowProductionStart(true);
       }
 
@@ -1116,13 +1084,17 @@ export default function App() {
   }, [records, form.maquina, form.fecha, form.turno, nowMs]);
 
   const hyundaiWaitInfo = useMemo(() => {
-    const machinesWith25MinuteRule = ["Torno Hyundai", "Centro Neway"];
+    const machineName = String(form.maquina || "").toLowerCase();
 
-if (!machinesWith25MinuteRule.includes(form.maquina)) {
-  return { blocked: false, remainingMinutes: 0 };
-}
+    const has25MinuteRule =
+      machineName.includes("torno hyundai") ||
+      machineName.includes("neway");
 
-    const lastRecord = getLastHyundaiRecord();
+    if (!has25MinuteRule) {
+      return { blocked: false, remainingMinutes: 0 };
+    }
+
+    const lastRecord = getLastRecordForCurrentContext();
 
     if (!lastRecord) {
       return { blocked: false, remainingMinutes: 0 };
@@ -1141,7 +1113,7 @@ if (!machinesWith25MinuteRule.includes(form.maquina)) {
       blocked: elapsedMinutes < 25,
       remainingMinutes: remainingMinutes > 0 ? remainingMinutes : 0,
     };
-  }, [form.maquina, form.fecha, form.turno, records, nowMs]);
+  }, [form.maquina, form.fecha, form.turno, form.operario, records, nowMs]);
 
   const checks = MACHINES[form.maquina];
 
@@ -1359,23 +1331,16 @@ if (!machinesWith25MinuteRule.includes(form.maquina)) {
   };
 
   const saveUserToSharedDatabase = async (user) => {
-    if (!isSupabaseConfigured) {
-      alert("Usuario guardado solo localmente: Supabase no está configurado.");
-      return false;
-    }
+    if (!isSupabaseConfigured) return;
 
     try {
       await upsertSharedUser(user);
       setUsersMode("Compartidos");
       setLastUsersSyncAt(new Date().toLocaleString("es-ES"));
-      return true;
     } catch (error) {
       console.error("Error guardando usuario en Supabase:", error);
       setUsersMode("Local sin conexión");
-      alert(`Usuario guardado localmente, pero NO se ha podido sincronizar con Supabase:
-
-${error?.message || String(error)}`);
-      return false;
+      alert(`Usuario guardado localmente, pero no se ha podido sincronizar con Supabase:\n\n${error?.message || String(error)}`);
     }
   };
 
@@ -1412,9 +1377,11 @@ ${error?.message || String(error)}`);
       return;
     }
 
-    if (form.maquina === "Torno Hyundai" && hyundaiWaitInfo.blocked) {
+    if (hyundaiWaitInfo.blocked) {
       alert(
-        `No ha transcurrido el tiempo suficiente entre registros. Deben pasar al menos 25 minutos entre verificaciones del Torno Hyundai dentro del mismo turno.
+        `No ha transcurrido el tiempo suficiente entre registros.
+
+Deben pasar al menos 25 minutos entre verificaciones del mismo operario y máquina.
 
 Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
       );
@@ -1476,7 +1443,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
 
     records.forEach((r) => {
       const row = {
-        Referencia: r.referenciaNombre || r.referencia || "F-1012 · Célula B",
+        Referencia: r.referenciaNombre || r.referencia || "F-1012  Célula B",
         Fecha: r.fecha,
         Máquina: r.maquina,
         "Hoja verificación": buildSheetName(r) || r.hojaNombre,
@@ -1653,9 +1620,11 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
 
     if (isVerificationUser(user)) {
       localStorage.removeItem("startupReference");
-            localStorage.removeItem("startupOF");
+      localStorage.removeItem("startupPiece");
+      localStorage.removeItem("startupOF");
       setStartupReference("F-1012");
-            setStartupOF("");
+      setStartupPiece("");
+      setStartupOF("");
       setShowProductionStart(true);
       setActiveView("nueva");
     } else {
@@ -1676,9 +1645,11 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
   const handleLogout = () => {
     localStorage.removeItem("fabrimotor-current-user");
     localStorage.removeItem("startupReference");
-        localStorage.removeItem("startupOF");
+    localStorage.removeItem("startupPiece");
+    localStorage.removeItem("startupOF");
     setStartupReference("F-1012");
-        setStartupOF("");
+    setStartupPiece("");
+    setStartupOF("");
     setShowProductionStart(false);
     setCurrentUser(null);
   };
@@ -1686,19 +1657,16 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
   const confirmProductionStart = () => {
     const selectedReferenceData = getReferenceById(startupReference);
     const of = startupOF.trim();
-    const lot = startupLot.trim();
-
-    localStorage.setItem("startupReference", selectedReferenceData.id);
+localStorage.setItem("startupReference", selectedReferenceData.id);
+    localStorage.setItem("startupPiece", piece);
     localStorage.setItem("startupOF", of);
-    localStorage.setItem("startupLot", lot);
 
     setForm((previous) => ({
       ...previous,
       referencia: selectedReferenceData.id,
       referenciaNombre: selectedReferenceData.label,
+      
       ordenFabricacion: of,
-      lote: lot,
-      numeroPieza: "",
     }));
 
     setShowProductionStart(false);
@@ -1726,17 +1694,15 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
       return;
     }
 
-    const userToSave = normalizeUserForStorage({ username, name, password, role });
     const exists = appUsers.some((user) => user.username === username);
     const nextUsers = exists
       ? appUsers.map((user) =>
-          user.username === username ? userToSave : user
+          user.username === username ? { username, name, password, role } : user
         )
-      : [...appUsers, userToSave];
+      : [...appUsers, { username, name, password, role }];
 
     setAppUsers(nextUsers);
     saveStoredUsers(nextUsers);
-    saveUserToSharedDatabase(userToSave);
     setAdminUserForm({
       username: "",
       name: "",
@@ -1749,7 +1715,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
     setAdminUserForm({
       username: user.username,
       name: user.name,
-      password: user.password || user.pin || "",
+      password: user.password,
       role: user.role,
     });
   };
@@ -1765,7 +1731,6 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
     const nextUsers = appUsers.filter((user) => user.username !== username);
     setAppUsers(nextUsers);
     saveStoredUsers(nextUsers);
-    deleteUserFromSharedDatabase(username);
   };
 
   const resetAdminUserForm = () => {
@@ -1940,7 +1905,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                           <td className="px-3 py-2 font-bold">{user.username}</td>
                           <td className="px-3 py-2">{user.name}</td>
                           <td className="px-3 py-2">{user.role}</td>
-                          <td className="px-3 py-2">{user.password || user.pin || ""}</td>
+                          <td className="px-3 py-2">{user.password}</td>
                           <td className="px-3 py-2 text-right">
                             <button
                               type="button"
@@ -1966,7 +1931,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                 </div>
 
                 <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
-                  Los cambios se guardan localmente y se sincronizan con Supabase cuando hay conexión.
+                  Los cambios se guardan solo en este equipo/navegador mediante localStorage.
                 </div>
               </div>
             </div>
@@ -1992,10 +1957,10 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                 Inicio de producción
               </div>
               <h2 className="mt-3 text-2xl font-black text-slate-900">
-                Inicio de producción
+                Introduce la pieza a registrar
               </h2>
               <p className="mt-1 text-sm text-slate-600">
-                Selecciona la referencia y, si procede, la orden de fabricación y el lote.
+                Estos datos se cargarán automáticamente en la verificación.
               </p>
             </div>
 
@@ -2008,7 +1973,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                 value={startupReference}
                 onChange={(event) => setStartupReference(event.target.value)}
               >
-                {REFERENCES.filter((reference) => reference.id === "F-1012").map((reference) => (
+                {REFERENCES.map((reference) => (
                   <option key={reference.id} value={reference.id}>
                     {reference.label}
                   </option>
@@ -2038,16 +2003,16 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
         </div>
       )}
       <div className="mx-auto flex min-h-screen max-w-[1600px] flex-col gap-4 p-4 lg:flex-row lg:p-6">
-        <aside className="max-h-[calc(100vh-24px)] overflow-y-auto overscroll-contain rounded-3xl border border-slate-200 bg-white p-4 shadow-xl lg:sticky lg:top-6 lg:h-[calc(100vh-48px)] lg:w-72 lg:shrink-0">
+        <aside className="rounded-3xl border border-slate-200 bg-white p-4 shadow-xl lg:sticky lg:top-6 lg:h-[calc(100vh-48px)] lg:w-72">
           <div className="mb-5 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div
               style={{
-                background: "#BDECB6",
+                background: "linear-gradient(135deg,#0f5c63 0%,#2b8e96 45%,#6cc8d2 100%)",
                 padding: "22px",
               }}
             >
               <h1 className="text-4xl font-black tracking-tight text-white">
-                F-1012 · Célula B
+                F-1012  Célula B
               </h1>
             </div>
 
@@ -2069,7 +2034,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
             </div>
           </div>
 
-          <nav className="space-y-1.5">
+          <nav className="space-y-2">
             <SidebarButton active={activeView === "nueva"} onClick={() => setActiveView("nueva")} icon={<ClipboardCheck className="h-4 w-4" />} label="Nueva verificación" />
             <SidebarButton active={activeView === "historico"} onClick={() => setActiveView("historico")} icon={<FileText className="h-4 w-4" />} label="Histórico" badge={filteredRecords.length} />
             <SidebarButton onClick={() => setShowRejectsModal(true)} icon={<AlertTriangle className="h-4 w-4" />} label="Rechazos" badge={rejectedRecords.length} danger />
@@ -2084,7 +2049,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
             )}
           </nav>
 
-          <div className="mt-3 rounded-2xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
+          <div className="mt-5 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
             <div className="font-bold">Estado actual</div>
             <div className="mt-2 grid gap-1 text-xs">
               <span>Máquina: <strong>{form.maquina}</strong></span>
@@ -2122,7 +2087,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
             </div>
           </div>
 
-          <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-800">
+          <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-800">
             <div className="text-xs font-black uppercase tracking-wide text-slate-500">Usuario conectado</div>
             <div className="mt-2 font-black text-slate-900">{currentUser.name}</div>
             <div className="text-xs text-slate-600">Rol: {roleLabel(currentUser.role)}</div>
@@ -2136,7 +2101,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
             </Button>
           </div>
 
-          <Button onClick={exportExcel} className="mt-3 w-full rounded-2xl bg-[#1f6f73] text-white shadow-sm">
+          <Button onClick={exportExcel} className="mt-4 w-full rounded-2xl bg-[#1f6f73] text-white shadow-sm">
             <Download className="mr-2 h-4 w-4" />
             Exportar Excel
           </Button>
@@ -2150,20 +2115,8 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
           >
             <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
               <div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <div className="inline-flex items-center gap-2 rounded-full bg-[#e6f4f4] px-4 py-2 text-sm font-bold text-[#1f6f73] ring-1 ring-[#b8dada]">
-                    FABRIMOTOR · {activeView === "nueva" ? "Nueva verificación" : "Histórico de registros"}
-                  </div>
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleLogout}
-                    className="rounded-2xl border-slate-300 bg-white text-xs font-bold text-slate-800 hover:bg-slate-100"
-                  >
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Salir
-                  </Button>
+                <div className="inline-flex items-center gap-2 rounded-full bg-[#e6f4f4] px-4 py-2 text-sm font-bold text-[#1f6f73] ring-1 ring-[#b8dada]">
+                  FABRIMOTOR · {activeView === "nueva" ? "Nueva verificación" : "Histórico de registros"}
                 </div>
                 <h2 className="mt-3 text-3xl font-black tracking-tight text-slate-900">
                   {activeView === "nueva" ? "F-1012 · Control de proceso" : "F-1012 · Histórico y calidad"}
@@ -2267,18 +2220,12 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                 </Field>
 
                 <Field label="Número de pieza">
-  <input
-    className="input font-semibold text-slate-900"
-    value={form.numeroPieza}
-    onChange={(event) =>
-      setForm((previous) => ({
-        ...previous,
-        numeroPieza: event.target.value,
-      }))
-    }
-    placeholder="Introduce el número de pieza"
-  />
-</Field>
+                  <input
+                    className="input bg-slate-100 font-semibold text-slate-700"
+                    value={form.numeroPieza}
+                    readOnly
+                  />
+                </Field>
               </div>
 
               <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
@@ -3189,11 +3136,6 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
 
         tbody td {
           color: #0f172a;
-        }
-
-        aside {
-          scrollbar-width: thin;
-          -webkit-overflow-scrolling: touch;
         }
 
         @media print {
@@ -4330,7 +4272,7 @@ function PdfMachineReport({ title, machineName, records }) {
           {title}
         </div>
         <div className="border-t border-black px-3 py-1 text-sm font-semibold">
-          Control proceso F-1012 · Célula B · Mediciones registradas
+          Control proceso F-1012  Célula B · Mediciones registradas
         </div>
       </div>
 
