@@ -757,20 +757,14 @@ function LoginScreen({ onLogin, users = getStoredUsers() }) {
         <img
           src="/logo-fabrimotor.png"
           alt="FabriMotor"
-          className="mb-8 h-16 w-auto object-contain"
+          className="mb-8 h-20 w-auto object-contain"
         />
 
         <div className="mb-6">
-          <div className="inline-flex rounded-full bg-[#e6f4f4] px-3 py-1 text-xs font-black uppercase tracking-wide text-[#1f6f73] ring-1 ring-[#b8dada]">
-            Acceso seguro
-          </div>
-          <h1 className="mt-4 text-3xl font-black tracking-tight text-slate-900">
-            Sistema de verificaciones
+<h1 className="mt-4 text-3xl font-black tracking-tight text-slate-900">
+            CONTROL DE PROCESO
           </h1>
-          <p className="mt-2 text-sm text-slate-600">
-            Introduce usuario y contraseña para acceder al control F-1012 · Célula  B.
-          </p>
-        </div>
+</div>
 
         <label className="mb-4 block">
           <span className="mb-1.5 block text-sm font-bold text-slate-700">Usuario</span>
@@ -806,7 +800,11 @@ function LoginScreen({ onLogin, users = getStoredUsers() }) {
           </div>
         )}
 
-        <Button type="submit" className="w-full rounded-2xl bg-blue-700 py-5 text-base font-black text-white shadow-lg">
+        <Button
+          type="submit"
+          className="w-full rounded-2xl py-5 text-base font-black shadow-lg"
+          style={{ backgroundColor: "#0F5C63", color: "#ffffff" }}
+        >
           Entrar
         </Button>
 
@@ -886,13 +884,12 @@ export default function App() {
   const [showProductionStart, setShowProductionStart] = useState(() => {
     try {
       const storedUser = JSON.parse(localStorage.getItem("fabrimotor-current-user") || "null");
-      return isVerificationUser(storedUser) && !localStorage.getItem("startupPiece");
+      return isVerificationUser(storedUser) && !localStorage.getItem("startupReference");
     } catch {
       return false;
     }
   });
   const [startupReference, setStartupReference] = useState(() => localStorage.getItem("startupReference") || "F-1012");
-  const [startupPiece, setStartupPiece] = useState(() => localStorage.getItem("startupPiece") || "");
   const [startupOF, setStartupOF] = useState(() => localStorage.getItem("startupOF") || "");
   const [startupLot, setStartupLot] = useState(() => localStorage.getItem("startupLot") || "");
 
@@ -900,8 +897,7 @@ export default function App() {
     if (currentUser) {
       const savedStartupReference = localStorage.getItem("startupReference") || "F-1012";
       const savedStartupReferenceData = getReferenceById(savedStartupReference);
-      const savedStartupPiece = localStorage.getItem("startupPiece") || "";
-      const savedStartupOF = localStorage.getItem("startupOF") || "";
+            const savedStartupOF = localStorage.getItem("startupOF") || "";
       const savedStartupLot = localStorage.getItem("startupLot") || "";
 
       setForm((previous) => ({
@@ -909,7 +905,7 @@ export default function App() {
         operario: `${currentUser.username} - ${currentUser.name.trim()}`,
         referencia: savedStartupReference,
         referenciaNombre: savedStartupReferenceData.label,
-        numeroPieza: savedStartupPiece || previous.numeroPieza,
+        numeroPieza: previous.numeroPieza || "",
         ordenFabricacion: savedStartupOF || previous.ordenFabricacion || "",
         lote: savedStartupLot || previous.lote || "",
       }));
@@ -1655,11 +1651,9 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
 
     if (isVerificationUser(user)) {
       localStorage.removeItem("startupReference");
-      localStorage.removeItem("startupPiece");
-      localStorage.removeItem("startupOF");
+            localStorage.removeItem("startupOF");
       setStartupReference("F-1012");
-      setStartupPiece("");
-      setStartupOF("");
+            setStartupOF("");
       setShowProductionStart(true);
       setActiveView("nueva");
     } else {
@@ -1680,35 +1674,29 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
   const handleLogout = () => {
     localStorage.removeItem("fabrimotor-current-user");
     localStorage.removeItem("startupReference");
-    localStorage.removeItem("startupPiece");
-    localStorage.removeItem("startupOF");
+        localStorage.removeItem("startupOF");
     setStartupReference("F-1012");
-    setStartupPiece("");
-    setStartupOF("");
+        setStartupOF("");
     setShowProductionStart(false);
     setCurrentUser(null);
   };
 
   const confirmProductionStart = () => {
     const selectedReferenceData = getReferenceById(startupReference);
-    const piece = startupPiece.trim();
     const of = startupOF.trim();
-
-    if (!piece) {
-      alert("Debe introducir el número de pieza.");
-      return;
-    }
+    const lot = startupLot.trim();
 
     localStorage.setItem("startupReference", selectedReferenceData.id);
-    localStorage.setItem("startupPiece", piece);
     localStorage.setItem("startupOF", of);
+    localStorage.setItem("startupLot", lot);
 
     setForm((previous) => ({
       ...previous,
       referencia: selectedReferenceData.id,
       referenciaNombre: selectedReferenceData.label,
-      numeroPieza: piece,
       ordenFabricacion: of,
+      lote: lot,
+      numeroPieza: "",
     }));
 
     setShowProductionStart(false);
@@ -2002,10 +1990,10 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                 Inicio de producción
               </div>
               <h2 className="mt-3 text-2xl font-black text-slate-900">
-                Introduce la pieza a registrar
+                Inicio de producción
               </h2>
               <p className="mt-1 text-sm text-slate-600">
-                Estos datos se cargarán automáticamente en la verificación.
+                Selecciona la referencia y, si procede, la orden de fabricación y el lote.
               </p>
             </div>
 
@@ -2018,28 +2006,14 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                 value={startupReference}
                 onChange={(event) => setStartupReference(event.target.value)}
               >
-                {REFERENCES.map((reference) => (
+                {REFERENCES.filter((reference) => reference.id === "F-1012").map((reference) => (
                   <option key={reference.id} value={reference.id}>
                     {reference.label}
                   </option>
                 ))}
               </select>
             </label>
-
-            <label className="mb-3 block">
-              <span className="mb-1.5 block text-sm font-bold text-slate-700">
-                Número de pieza
-              </span>
-              <input
-                autoFocus
-                className="input"
-                value={startupPiece}
-                onChange={(event) => setStartupPiece(event.target.value)}
-                placeholder="Ejemplo: 123456"
-              />
-            </label>
-
-            <label className="mb-5 block">
+<label className="mb-5 block">
               <span className="mb-1.5 block text-sm font-bold text-slate-700">
                 Orden de fabricación
               </span>
@@ -2066,7 +2040,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
           <div className="mb-5 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div
               style={{
-                background: "linear-gradient(135deg,#0f5c63 0%,#2b8e96 45%,#6cc8d2 100%)",
+                background: "#BDECB6",
                 padding: "22px",
               }}
             >
