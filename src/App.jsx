@@ -50,11 +50,11 @@ const USER_ROLES = [
 ];
 
 const REFERENCES = [
-  { id: "F-1012", label: "F-1012  Célula B", celula: "Célula B" },
-  { id: "F-1013", label: "F-1013  Célula A", celula: "Célula A" },
-  { id: "F-1025", label: "F-1025  Célula A", celula: "Célula A" },
-  { id: "F-1026", label: "F-1026  Célula A", celula: "Célula A" },
-  { id: "F-1029", label: "F-1029  Célula A", celula: "Célula A" },
+  { id: "F-1012", label: "F-1012 · Célula B", celula: "Célula B" },
+  { id: "F-1013", label: "F-1013 · Célula A", celula: "Célula A" },
+  { id: "F-1025", label: "F-1025 · Célula A", celula: "Célula A" },
+  { id: "F-1026", label: "F-1026 · Célula A", celula: "Célula A" },
+  { id: "F-1029", label: "F-1029 · Célula A", celula: "Célula A" },
 ];
 
 function getReferenceById(referenceId) {
@@ -507,7 +507,7 @@ function createRecordId() {
 function initialForm() {
   return {
     referencia: "F-1012",
-    referenciaNombre: "F-1012  Célula B",
+    referenciaNombre: "F-1012 · Célula B",
     maquina: "Torno Hyundai",
     fecha: today(),
     turno: "M",
@@ -732,7 +732,7 @@ function LoginScreen({ onLogin, users = getStoredUsers() }) {
             Sistema de verificaciones
           </h1>
           <p className="mt-2 text-sm text-slate-600">
-            Introduce usuario y contraseña para acceder al control F-1012  Célula  B.
+            Introduce usuario y contraseña para acceder al control F-1012 · Célula  B.
           </p>
         </div>
 
@@ -856,7 +856,7 @@ export default function App() {
     }
   });
   const [startupReference, setStartupReference] = useState(() => localStorage.getItem("startupReference") || "F-1012");
-  const [ setStartupPiece] = useState(() => localStorage.getItem("startupPiece") || "");
+  const [startupPiece, setStartupPiece] = useState(() => localStorage.getItem("startupPiece") || "");
   const [startupOF, setStartupOF] = useState(() => localStorage.getItem("startupOF") || "");
   const [startupLot, setStartupLot] = useState(() => localStorage.getItem("startupLot") || "");
 
@@ -1084,17 +1084,11 @@ export default function App() {
   }, [records, form.maquina, form.fecha, form.turno, nowMs]);
 
   const hyundaiWaitInfo = useMemo(() => {
-    const machineName = String(form.maquina || "").toLowerCase();
-
-    const has25MinuteRule =
-      machineName.includes("torno hyundai") ||
-      machineName.includes("neway");
-
-    if (!has25MinuteRule) {
+    if (form.maquina !== "Torno Hyundai") {
       return { blocked: false, remainingMinutes: 0 };
     }
 
-    const lastRecord = getLastRecordForCurrentContext();
+    const lastRecord = getLastHyundaiRecord();
 
     if (!lastRecord) {
       return { blocked: false, remainingMinutes: 0 };
@@ -1113,7 +1107,7 @@ export default function App() {
       blocked: elapsedMinutes < 25,
       remainingMinutes: remainingMinutes > 0 ? remainingMinutes : 0,
     };
-  }, [form.maquina, form.fecha, form.turno, form.operario, records, nowMs]);
+  }, [form.maquina, form.fecha, form.turno, records, nowMs]);
 
   const checks = MACHINES[form.maquina];
 
@@ -1443,7 +1437,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
 
     records.forEach((r) => {
       const row = {
-        Referencia: r.referenciaNombre || r.referencia || "F-1012  Célula B",
+        Referencia: r.referenciaNombre || r.referencia || "F-1012 · Célula B",
         Fecha: r.fecha,
         Máquina: r.maquina,
         "Hoja verificación": buildSheetName(r) || r.hojaNombre,
@@ -1656,8 +1650,15 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
 
   const confirmProductionStart = () => {
     const selectedReferenceData = getReferenceById(startupReference);
+    const piece = startupPiece.trim();
     const of = startupOF.trim();
-localStorage.setItem("startupReference", selectedReferenceData.id);
+
+    if (!piece) {
+      alert("Debe introducir el número de pieza.");
+      return;
+    }
+
+    localStorage.setItem("startupReference", selectedReferenceData.id);
     localStorage.setItem("startupPiece", piece);
     localStorage.setItem("startupOF", of);
 
@@ -1665,7 +1666,7 @@ localStorage.setItem("startupReference", selectedReferenceData.id);
       ...previous,
       referencia: selectedReferenceData.id,
       referenciaNombre: selectedReferenceData.label,
-      
+      numeroPieza: piece,
       ordenFabricacion: of,
     }));
 
@@ -1980,7 +1981,21 @@ localStorage.setItem("startupReference", selectedReferenceData.id);
                 ))}
               </select>
             </label>
-<label className="mb-5 block">
+
+            <label className="mb-3 block">
+              <span className="mb-1.5 block text-sm font-bold text-slate-700">
+                Número de pieza
+              </span>
+              <input
+                autoFocus
+                className="input"
+                value={startupPiece}
+                onChange={(event) => setStartupPiece(event.target.value)}
+                placeholder="Ejemplo: 123456"
+              />
+            </label>
+
+            <label className="mb-5 block">
               <span className="mb-1.5 block text-sm font-bold text-slate-700">
                 Orden de fabricación
               </span>
@@ -2012,7 +2027,7 @@ localStorage.setItem("startupReference", selectedReferenceData.id);
               }}
             >
               <h1 className="text-4xl font-black tracking-tight text-white">
-                F-1012  Célula B
+                F-1012 · Célula B
               </h1>
             </div>
 
@@ -4272,7 +4287,7 @@ function PdfMachineReport({ title, machineName, records }) {
           {title}
         </div>
         <div className="border-t border-black px-3 py-1 text-sm font-semibold">
-          Control proceso F-1012  Célula B · Mediciones registradas
+          Control proceso F-1012 · Célula B · Mediciones registradas
         </div>
       </div>
 
