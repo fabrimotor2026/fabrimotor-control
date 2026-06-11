@@ -52,22 +52,13 @@ const USER_ROLES = [
 const REFERENCES = [
   { id: "F-1012", label: "F-1012 · Célula B", celula: "Célula B" },
   { id: "F-1013", label: "F-1013 · Célula A", celula: "Célula A" },
-  { id: "F-1025", label: "F-1025 · Célula A", celula: "Célula A" },
-  { id: "F-1026", label: "F-1026 · Célula A", celula: "Célula A" },
-  { id: "F-1029", label: "F-1029 · Célula A", celula: "Célula A" },
+  { id: "F-1025", label: "F-1025"},
+  { id: "F-1026", label: "F-1026"},
+  { id: "F-1029", label: "F-1029"},
 ];
 
 function getReferenceById(referenceId) {
   return REFERENCES.find((item) => item.id === referenceId) || REFERENCES[0];
-}
-
-const QUALITY_DAILY_CHECK_IDS = ["c280", "c120"];
-
-function isQualityDailyCheckEmpty(check) {
-  return (
-    QUALITY_DAILY_CHECK_IDS.includes(check.id) &&
-    (check.value === undefined || check.value === null || check.value === "")
-  );
 }
 
 const USERS = [
@@ -770,10 +761,11 @@ function LoginScreen({ onLogin, users = getStoredUsers() }) {
         />
 
         <div className="mb-6">
-<h1 className="mt-4 text-3xl font-black tracking-tight text-slate-900">
+          <h1 className="mt-4 text-3xl font-black tracking-tight text-slate-900">
             CONTROL DE PROCESO
           </h1>
-</div>
+
+        </div>
 
         <label className="mb-4 block">
           <span className="mb-1.5 block text-sm font-bold text-slate-700">Usuario</span>
@@ -810,12 +802,15 @@ function LoginScreen({ onLogin, users = getStoredUsers() }) {
         )}
 
         <Button
-          type="submit"
-          className="w-full rounded-2xl py-5 text-base font-black shadow-lg"
-          style={{ backgroundColor: "#0F5C63", color: "#ffffff" }}
-        >
-          Entrar
-        </Button>
+  type="submit"
+  className="w-full rounded-2xl py-5 text-base font-black shadow-lg"
+  style={{
+    backgroundColor: "#0F5C63",
+    color: "#ffffff",
+  }}
+>
+  Entrar
+</Button>
 
         <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-xs text-slate-600">
           <div className="font-black text-slate-800">Acceso</div>
@@ -893,12 +888,13 @@ export default function App() {
   const [showProductionStart, setShowProductionStart] = useState(() => {
     try {
       const storedUser = JSON.parse(localStorage.getItem("fabrimotor-current-user") || "null");
-      return isVerificationUser(storedUser) && !localStorage.getItem("startupReference");
+      return isVerificationUser(storedUser) && !localStorage.getItem("startupPiece");
     } catch {
       return false;
     }
   });
   const [startupReference, setStartupReference] = useState(() => localStorage.getItem("startupReference") || "F-1012");
+  const [startupPiece, setStartupPiece] = useState(() => localStorage.getItem("startupPiece") || "");
   const [startupOF, setStartupOF] = useState(() => localStorage.getItem("startupOF") || "");
   const [startupLot, setStartupLot] = useState(() => localStorage.getItem("startupLot") || "");
 
@@ -906,7 +902,8 @@ export default function App() {
     if (currentUser) {
       const savedStartupReference = localStorage.getItem("startupReference") || "F-1012";
       const savedStartupReferenceData = getReferenceById(savedStartupReference);
-            const savedStartupOF = localStorage.getItem("startupOF") || "";
+      const savedStartupPiece = localStorage.getItem("startupPiece") || "";
+      const savedStartupOF = localStorage.getItem("startupOF") || "";
       const savedStartupLot = localStorage.getItem("startupLot") || "";
 
       setForm((previous) => ({
@@ -914,12 +911,12 @@ export default function App() {
         operario: `${currentUser.username} - ${currentUser.name.trim()}`,
         referencia: savedStartupReference,
         referenciaNombre: savedStartupReferenceData.label,
-        numeroPieza: previous.numeroPieza || "",
+        numeroPieza: savedStartupPiece || previous.numeroPieza,
         ordenFabricacion: savedStartupOF || previous.ordenFabricacion || "",
         lote: savedStartupLot || previous.lote || "",
       }));
 
-      if (isVerificationUser(currentUser) && !localStorage.getItem("startupReference")) {
+      if (isVerificationUser(currentUser) && !savedStartupPiece) {
         setShowProductionStart(true);
       }
 
@@ -1124,37 +1121,10 @@ export default function App() {
     return formatDuration(seconds);
   }, [records, form.maquina, form.fecha, form.turno, nowMs]);
 
-  const hyundaiWaitInfo = useMemo(() => {
-    const machinesWith25MinuteRule = [
-  "Torno Hyundai",
-  "Centro NEWAY",
-  "Centro Neway"
-];
-
-if (!machinesWith25MinuteRule.includes(form.maquina)) {
-  return { blocked: false, remainingMinutes: 0 };
-}
-
-    const lastRecord = getLastHyundaiRecord();
-
-    if (!lastRecord) {
-      return { blocked: false, remainingMinutes: 0 };
-    }
-
-    const lastTime = getRecordTimeMs(lastRecord);
-
-    if (!lastTime) {
-      return { blocked: false, remainingMinutes: 0 };
-    }
-
-    const elapsedMinutes = (nowMs - lastTime) / (1000 * 60);
-    const remainingMinutes = Math.ceil(25 - elapsedMinutes);
-
-    return {
-      blocked: elapsedMinutes < 25,
-      remainingMinutes: remainingMinutes > 0 ? remainingMinutes : 0,
-    };
-  }, [form.maquina, form.fecha, form.turno, records, nowMs]);
+  const hyundaiWaitInfo = {
+  blocked: false,
+  remainingMinutes: 0,
+};
 
   const checks = MACHINES[form.maquina];
 
@@ -1189,8 +1159,7 @@ if (!machinesWith25MinuteRule.includes(form.maquina)) {
   }, [checks, values]);
 
   const controlTurnoOk = form.maquina !== "Torno Hyundai" || values.controlTurno === "OK";
-  const overallOk =
-    validation.every((v) => isQualityDailyCheckEmpty(v) || v.ok) && controlTurnoOk;
+  const overallOk = validation.every((v) => v.ok) && controlTurnoOk;
 
   const buildSheetId = (data) => {
     if (!data.fecha || !data.turno || !data.maquina) {
@@ -1426,25 +1395,7 @@ ${error?.message || String(error)}`);
       return;
     }
 
-    const machinesWith25MinuteRule = [
-  "Torno Hyundai",
-  "Centro NEWAY"
-];
-
-if (
-  machinesWith25MinuteRule.includes(form.maquina) &&
-  hyundaiWaitInfo.blocked
-) {
-  alert(
-    `No ha transcurrido el tiempo suficiente entre registros.
-
-Deben pasar al menos 25 minutos entre verificaciones del mismo operario y máquina.
-
-Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
-  );
-
-  return;
-}
+    if (form.maquina === "Torno Hyundai" && hyundaiWaitInfo.blocked) {
       alert(
         `No ha transcurrido el tiempo suficiente entre registros. Deben pasar al menos 25 minutos entre verificaciones del Torno Hyundai dentro del mismo turno.
 
@@ -1600,13 +1551,6 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
     const checksOk = machineChecks.every((check) => {
       const value = measurementValues?.[check.id];
 
-      if (
-        QUALITY_DAILY_CHECK_IDS.includes(check.id) &&
-        (value === undefined || value === null || value === "")
-      ) {
-        return true;
-      }
-
       if (check.type === "number") {
         const numeric = Number(value);
         return !Number.isNaN(numeric) && numeric >= check.min && numeric <= check.max;
@@ -1692,9 +1636,11 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
 
     if (isVerificationUser(user)) {
       localStorage.removeItem("startupReference");
-            localStorage.removeItem("startupOF");
+      localStorage.removeItem("startupPiece");
+      localStorage.removeItem("startupOF");
       setStartupReference("F-1012");
-            setStartupOF("");
+      setStartupPiece("");
+      setStartupOF("");
       setShowProductionStart(true);
       setActiveView("nueva");
     } else {
@@ -1715,29 +1661,35 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
   const handleLogout = () => {
     localStorage.removeItem("fabrimotor-current-user");
     localStorage.removeItem("startupReference");
-        localStorage.removeItem("startupOF");
+    localStorage.removeItem("startupPiece");
+    localStorage.removeItem("startupOF");
     setStartupReference("F-1012");
-        setStartupOF("");
+    setStartupPiece("");
+    setStartupOF("");
     setShowProductionStart(false);
     setCurrentUser(null);
   };
 
   const confirmProductionStart = () => {
     const selectedReferenceData = getReferenceById(startupReference);
+    const piece = startupPiece.trim();
     const of = startupOF.trim();
-    const lot = startupLot.trim();
+
+    if (!piece) {
+      alert("Debe introducir el número de pieza.");
+      return;
+    }
 
     localStorage.setItem("startupReference", selectedReferenceData.id);
+    localStorage.setItem("startupPiece", piece);
     localStorage.setItem("startupOF", of);
-    localStorage.setItem("startupLot", lot);
 
     setForm((previous) => ({
       ...previous,
       referencia: selectedReferenceData.id,
       referenciaNombre: selectedReferenceData.label,
+      numeroPieza: piece,
       ordenFabricacion: of,
-      lote: lot,
-      numeroPieza: "",
     }));
 
     setShowProductionStart(false);
@@ -2031,10 +1983,10 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                 Inicio de producción
               </div>
               <h2 className="mt-3 text-2xl font-black text-slate-900">
-                Inicio de producción
+                Introduce la pieza a registrar
               </h2>
               <p className="mt-1 text-sm text-slate-600">
-                Selecciona la referencia y, si procede, la orden de fabricación y el lote.
+                Estos datos se cargarán automáticamente en la verificación.
               </p>
             </div>
 
@@ -2047,14 +1999,30 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                 value={startupReference}
                 onChange={(event) => setStartupReference(event.target.value)}
               >
-                {REFERENCES.filter((reference) => reference.id === "F-1012").map((reference) => (
-                  <option key={reference.id} value={reference.id}>
-                    {reference.label}
-                  </option>
-                ))}
+               {REFERENCES
+  .filter((reference) => reference.id === "F-1012")
+  .map((reference) => (
+    <option key={reference.id} value={reference.id}>
+      {reference.label}
+    </option>
+  ))}
               </select>
             </label>
-<label className="mb-5 block">
+
+            <label className="mb-3 block">
+              <span className="mb-1.5 block text-sm font-bold text-slate-700">
+                Número de pieza
+              </span>
+              <input
+                autoFocus
+                className="input"
+                value={startupPiece}
+                onChange={(event) => setStartupPiece(event.target.value)}
+                placeholder="Ejemplo: 123456"
+              />
+            </label>
+
+            <label className="mb-5 block">
               <span className="mb-1.5 block text-sm font-bold text-slate-700">
                 Orden de fabricación
               </span>
@@ -2069,7 +2037,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
             <Button
               type="button"
               onClick={confirmProductionStart}
-              className="w-full rounded-2xl bg-blue-700 py-5 text-base font-black text-white shadow-lg"
+              className="w-full rounded-2xl bg-[#0f5c63] py-5 text-base font-black text-white shadow-lg"
             >
               Continuar
             </Button>
@@ -2080,14 +2048,26 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
         <aside className="max-h-[calc(100vh-24px)] overflow-y-auto overscroll-contain rounded-3xl border border-slate-200 bg-white p-4 shadow-xl lg:sticky lg:top-6 lg:h-[calc(100vh-48px)] lg:w-72 lg:shrink-0">
           <div className="mb-5 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div
-              style={{
-                background: "#BDECB6",
-                padding: "22px",
-              }}
+             style={{
+  background: "linear-gradient(135deg,#BDECB6 0%,#A8E09F 100%)",
+}}
             >
-              <h1 className="text-4xl font-black tracking-tight text-white">
-                F-1012 · Célula B
-              </h1>
+              <div
+  style={{
+    background: "#BDECB6",
+    padding: "22px",
+    minHeight: "120px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    textAlign: "center",
+  }}
+>
+  <h1 className="text-3xl font-black tracking-tight text-slate-900 leading-tight">
+    F-1012 ·<br />
+    Célula B
+  </h1>
+</div>
             </div>
 
             <div className="p-4">
@@ -2102,7 +2082,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                 Control digital
               </div>
 
-              <p className="mt-4 text-sm font-medium text-slate-600">
+              <p className="mt-4 text-sm font-medium text-[#0F172A]">
                 Control de proceso · Producción
               </p>
             </div>
@@ -2306,18 +2286,12 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                 </Field>
 
                 <Field label="Número de pieza">
-  <input
-    className="input font-semibold text-slate-900"
-    value={form.numeroPieza}
-    onChange={(event) =>
-      setForm((previous) => ({
-        ...previous,
-        numeroPieza: event.target.value,
-      }))
-    }
-    placeholder="Introduce el número de pieza"
-  />
-</Field>
+                  <input
+                    className="input bg-slate-100 font-semibold text-slate-700"
+                    value={form.numeroPieza}
+                    readOnly
+                  />
+                </Field>
               </div>
 
               <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
@@ -2458,12 +2432,6 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                             {item.frecuencia && (
                               <div className="rounded-xl bg-blue-50 p-2 font-medium text-blue-800">
                                 Frecuencia: {item.frecuencia}
-                              </div>
-                            )}
-
-                            {QUALITY_DAILY_CHECK_IDS.includes(item.id) && (
-                              <div className="rounded-xl bg-amber-50 p-2 font-bold text-amber-800">
-                                Control diario de Calidad. No obligatorio para el operario.
                               </div>
                             )}
 
