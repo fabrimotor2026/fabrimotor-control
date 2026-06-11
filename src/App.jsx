@@ -61,6 +61,19 @@ function getReferenceById(referenceId) {
   return REFERENCES.find((item) => item.id === referenceId) || REFERENCES[0];
 }
 
+const QUALITY_DAILY_CHECK_IDS = ["c280", "c120"];
+
+function isQualityDailyCheckEmptyById(id, value) {
+  return (
+    QUALITY_DAILY_CHECK_IDS.includes(id) &&
+    (value === undefined || value === null || value === "")
+  );
+}
+
+function isQualityDailyValidationEmpty(check) {
+  return isQualityDailyCheckEmptyById(check.id, check.value);
+}
+
 const USERS = [
   {
     "username": "1001",
@@ -1133,6 +1146,15 @@ export default function App() {
       const value = values[item.id];
 
       if (item.type === "number") {
+        if (isQualityDailyCheckEmptyById(item.id, value)) {
+          return {
+            ...item,
+            value,
+            ok: true,
+            pendingQuality: true,
+          };
+        }
+
         const numeric = Number(value);
         const ok = !Number.isNaN(numeric) && numeric >= item.min && numeric <= item.max;
         return {
@@ -1159,7 +1181,7 @@ export default function App() {
   }, [checks, values]);
 
   const controlTurnoOk = form.maquina !== "Torno Hyundai" || values.controlTurno === "OK";
-  const overallOk = validation.every((v) => v.ok) && controlTurnoOk;
+  const overallOk = validation.every((v) => isQualityDailyValidationEmpty(v) || v.ok) && controlTurnoOk;
 
   const buildSheetId = (data) => {
     if (!data.fecha || !data.turno || !data.maquina) {
@@ -1550,6 +1572,10 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
 
     const checksOk = machineChecks.every((check) => {
       const value = measurementValues?.[check.id];
+
+      if (isQualityDailyCheckEmptyById(check.id, value)) {
+        return true;
+      }
 
       if (check.type === "number") {
         const numeric = Number(value);
@@ -2064,7 +2090,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
   }}
 >
   <h1 className="text-3xl font-black tracking-tight text-slate-900 leading-tight">
-    F-1012<br />
+    F-1012 ·<br />
     Célula B
   </h1>
 </div>
@@ -2090,10 +2116,18 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
 
           <nav className="space-y-1.5">
             <SidebarButton active={activeView === "nueva"} onClick={() => setActiveView("nueva")} icon={<ClipboardCheck className="h-4 w-4" />} label="Nueva verificación" />
-            <SidebarButton active={activeView === "historico"} onClick={() => setActiveView("historico")} icon={<FileText className="h-4 w-4" />} label="Histórico" badge={filteredRecords.length} />
-            <SidebarButton onClick={() => setShowRejectsModal(true)} icon={<AlertTriangle className="h-4 w-4" />} label="Rechazos" badge={rejectedRecords.length} danger />
-            <SidebarButton onClick={() => setShowPdfModal(true)} icon={<Printer className="h-4 w-4" />} label="PDF registros" />
-            <SidebarButton onClick={() => setShowCpkModal(true)} icon={<TrendingUp className="h-4 w-4" />} label="Gráfico CPK 30/40" />
+
+            {isVerificationUser(currentUser) ? (
+              <SidebarButton active={activeView === "historico"} onClick={() => setActiveView("historico")} icon={<FileText className="h-4 w-4" />} label="Mi historial" />
+            ) : (
+              <>
+                <SidebarButton active={activeView === "historico"} onClick={() => setActiveView("historico")} icon={<FileText className="h-4 w-4" />} label="Histórico" badge={filteredRecords.length} />
+                <SidebarButton onClick={() => setShowRejectsModal(true)} icon={<AlertTriangle className="h-4 w-4" />} label="Rechazos" badge={rejectedRecords.length} danger />
+                <SidebarButton onClick={() => setShowPdfModal(true)} icon={<Printer className="h-4 w-4" />} label="PDF registros" />
+                <SidebarButton onClick={() => setShowCpkModal(true)} icon={<TrendingUp className="h-4 w-4" />} label="Gráfico CPK 30/40" />
+              </>
+            )}
+
             {isAdminUser(currentUser) && (
               <SidebarButton
                 onClick={() => setShowAdminPanel(true)}
@@ -2435,6 +2469,12 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                               </div>
                             )}
 
+                            {QUALITY_DAILY_CHECK_IDS.includes(item.id) && (
+                              <div className="rounded-xl bg-amber-50 p-2 font-bold text-amber-800">
+                                Control diario de Calidad. No obligatorio para el operario.
+                              </div>
+                            )}
+
                             {item.comentario && (
                               <div className="rounded-xl bg-slate-100 p-2 text-slate-700">
                                 {item.comentario}
@@ -2452,7 +2492,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                               : "bg-red-100 text-red-700"
                           }`}
                         >
-                          {item.ok ? "OK" : "NO OK"}
+                          {item.pendingQuality ? "Pendiente Calidad" : item.ok ? "OK" : "NO OK"}
                         </div>
                       )}
                     </div>
