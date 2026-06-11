@@ -50,7 +50,7 @@ const USER_ROLES = [
 ];
 
 const REFERENCES = [
-  { id: "F-1012", label: "F-1012\nCélula B", celula: "Célula B" },
+  { id: "F-1012", label: "F-1012 · Célula B", celula: "Célula B" },
   { id: "F-1013", label: "F-1013 · Célula A", celula: "Célula A" },
   { id: "F-1025", label: "F-1025"},
   { id: "F-1026", label: "F-1026"},
@@ -59,25 +59,6 @@ const REFERENCES = [
 
 function getReferenceById(referenceId) {
   return REFERENCES.find((item) => item.id === referenceId) || REFERENCES[0];
-}
-
-const QUALITY_DAILY_CHECK_IDS = ["c280", "c120"];
-
-function isQualityDailyCheckEmptyById(id, value) {
-  return (
-    QUALITY_DAILY_CHECK_IDS.includes(id) &&
-    (value === undefined || value === null || value === "")
-  );
-}
-
-function isQualityDailyValidationEmpty(check) {
-  return isQualityDailyCheckEmptyById(check.id, check.value);
-}
-
-const SHIFT_START_CHECK_IDS = ["controlTurno", "c70", "c80", "c90", "c340", "c370"];
-
-function isEmptyValue(value) {
-  return value === undefined || value === null || value === "";
 }
 
 const USERS = [
@@ -526,7 +507,7 @@ function createRecordId() {
 function initialForm() {
   return {
     referencia: "F-1012",
-    referenciaNombre: "F-1012\nCélula B",
+    referenciaNombre: "F-1012 · Célula B",
     maquina: "Torno Hyundai",
     fecha: today(),
     turno: "M",
@@ -1147,43 +1128,11 @@ export default function App() {
 
   const checks = MACHINES[form.maquina];
 
-  const hasPreviousShiftRecord = useMemo(() => {
-    return records.some(
-      (record) =>
-        record.maquina === form.maquina &&
-        (record.referencia || "F-1012") === (form.referencia || "F-1012") &&
-        record.fecha === form.fecha &&
-        record.turno === form.turno &&
-        record.operario === form.operario
-    );
-  }, [records, form.maquina, form.referencia, form.fecha, form.turno, form.operario]);
-
-  const isShiftStartCheckOptionalNow = (id, value) =>
-    hasPreviousShiftRecord && SHIFT_START_CHECK_IDS.includes(id) && isEmptyValue(value);
-
   const validation = useMemo(() => {
     return checks.map((item) => {
       const value = values[item.id];
 
       if (item.type === "number") {
-        if (isQualityDailyCheckEmptyById(item.id, value)) {
-          return {
-            ...item,
-            value,
-            ok: true,
-            pendingQuality: true,
-          };
-        }
-
-        if (isShiftStartCheckOptionalNow(item.id, value)) {
-          return {
-            ...item,
-            value,
-            ok: true,
-            pendingShiftStart: true,
-          };
-        }
-
         const numeric = Number(value);
         const ok = !Number.isNaN(numeric) && numeric >= item.min && numeric <= item.max;
         return {
@@ -1194,15 +1143,6 @@ export default function App() {
       }
 
       if (item.type === "oknok") {
-        if (isShiftStartCheckOptionalNow(item.id, value)) {
-          return {
-            ...item,
-            value,
-            ok: true,
-            pendingShiftStart: true,
-          };
-        }
-
         return {
           ...item,
           value,
@@ -1218,11 +1158,8 @@ export default function App() {
     });
   }, [checks, values]);
 
-  const controlTurnoOk =
-    form.maquina !== "Torno Hyundai" ||
-    values.controlTurno === "OK" ||
-    (hasPreviousShiftRecord && isEmptyValue(values.controlTurno));
-  const overallOk = validation.every((v) => isQualityDailyValidationEmpty(v) || v.ok) && controlTurnoOk;
+  const controlTurnoOk = form.maquina !== "Torno Hyundai" || values.controlTurno === "OK";
+  const overallOk = validation.every((v) => v.ok) && controlTurnoOk;
 
   const buildSheetId = (data) => {
     if (!data.fecha || !data.turno || !data.maquina) {
@@ -1522,7 +1459,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
 
     records.forEach((r) => {
       const row = {
-        Referencia: r.referenciaNombre || r.referencia || "F-1012\nCélula B",
+        Referencia: r.referenciaNombre || r.referencia || "F-1012 · Célula B",
         Fecha: r.fecha,
         Máquina: r.maquina,
         "Hoja verificación": buildSheetName(r) || r.hojaNombre,
@@ -1614,14 +1551,6 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
     const checksOk = machineChecks.every((check) => {
       const value = measurementValues?.[check.id];
 
-      if (isQualityDailyCheckEmptyById(check.id, value)) {
-        return true;
-      }
-
-      if (SHIFT_START_CHECK_IDS.includes(check.id) && isEmptyValue(value)) {
-        return true;
-      }
-
       if (check.type === "number") {
         const numeric = Number(value);
         return !Number.isNaN(numeric) && numeric >= check.min && numeric <= check.max;
@@ -1634,10 +1563,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
       return false;
     });
 
-    const controlTurnoOk =
-      machineName !== "Torno Hyundai" ||
-      measurementValues?.controlTurno === "OK" ||
-      isEmptyValue(measurementValues?.controlTurno);
+    const controlTurnoOk = machineName !== "Torno Hyundai" || measurementValues?.controlTurno === "OK";
 
     return checksOk && controlTurnoOk ? "OK" : "NO OK";
   };
@@ -1726,7 +1652,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
       ...previous,
       operario: `${user.username} - ${user.name.trim()}`,
       referencia: "F-1012",
-      referenciaNombre: "F-1012\nCélula B",
+      referenciaNombre: "F-1012 · Célula B",
       numeroPieza: "",
       ordenFabricacion: "",
     }));
@@ -2138,7 +2064,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
   }}
 >
   <h1 className="text-3xl font-black tracking-tight text-slate-900 leading-tight">
-    F-1012 ·<br />
+    F-1012<br />
     Célula B
   </h1>
 </div>
@@ -2509,18 +2435,6 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                               </div>
                             )}
 
-                            {QUALITY_DAILY_CHECK_IDS.includes(item.id) && (
-                              <div className="rounded-xl bg-amber-50 p-2 font-bold text-amber-800">
-                                Control diario de Calidad. No obligatorio para el operario.
-                              </div>
-                            )}
-
-                            {SHIFT_START_CHECK_IDS.includes(item.id) && (
-                              <div className="rounded-xl bg-amber-50 p-2 font-bold text-amber-800">
-                                Control de inicio de turno. Obligatorio solo en la primera pieza del turno.
-                              </div>
-                            )}
-
                             {item.comentario && (
                               <div className="rounded-xl bg-slate-100 p-2 text-slate-700">
                                 {item.comentario}
@@ -2538,13 +2452,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                               : "bg-red-100 text-red-700"
                           }`}
                         >
-                          {item.pendingQuality
-                            ? "Pendiente Calidad"
-                            : item.pendingShiftStart
-                            ? "Inicio turno"
-                            : item.ok
-                            ? "OK"
-                            : "NO OK"}
+                          {item.ok ? "OK" : "NO OK"}
                         </div>
                       )}
                     </div>
@@ -4435,7 +4343,7 @@ function PdfMachineReport({ title, machineName, records }) {
           {title}
         </div>
         <div className="border-t border-black px-3 py-1 text-sm font-semibold">
-          Control proceso F-1012\nCélula B · Mediciones registradas
+          Control proceso F-1012 · Célula B · Mediciones registradas
         </div>
       </div>
 
