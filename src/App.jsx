@@ -74,6 +74,12 @@ function isQualityDailyValidationEmpty(check) {
   return isQualityDailyCheckEmptyById(check.id, check.value);
 }
 
+const SHIFT_START_CHECK_IDS = ["controlTurno", "c70", "c80", "c90"];
+
+function isEmptyValue(value) {
+  return value === undefined || value === null || value === "";
+}
+
 const USERS = [
   {
     "username": "1001",
@@ -1141,6 +1147,20 @@ export default function App() {
 
   const checks = MACHINES[form.maquina];
 
+  const hasPreviousShiftRecord = useMemo(() => {
+    return records.some(
+      (record) =>
+        record.maquina === form.maquina &&
+        (record.referencia || "F-1012") === (form.referencia || "F-1012") &&
+        record.fecha === form.fecha &&
+        record.turno === form.turno &&
+        record.operario === form.operario
+    );
+  }, [records, form.maquina, form.referencia, form.fecha, form.turno, form.operario]);
+
+  const isShiftStartCheckOptionalNow = (id, value) =>
+    hasPreviousShiftRecord && SHIFT_START_CHECK_IDS.includes(id) && isEmptyValue(value);
+
   const validation = useMemo(() => {
     return checks.map((item) => {
       const value = values[item.id];
@@ -1155,6 +1175,15 @@ export default function App() {
           };
         }
 
+        if (isShiftStartCheckOptionalNow(item.id, value)) {
+          return {
+            ...item,
+            value,
+            ok: true,
+            pendingShiftStart: true,
+          };
+        }
+
         const numeric = Number(value);
         const ok = !Number.isNaN(numeric) && numeric >= item.min && numeric <= item.max;
         return {
@@ -1165,6 +1194,15 @@ export default function App() {
       }
 
       if (item.type === "oknok") {
+        if (isShiftStartCheckOptionalNow(item.id, value)) {
+          return {
+            ...item,
+            value,
+            ok: true,
+            pendingShiftStart: true,
+          };
+        }
+
         return {
           ...item,
           value,
@@ -1180,7 +1218,10 @@ export default function App() {
     });
   }, [checks, values]);
 
-  const controlTurnoOk = form.maquina !== "Torno Hyundai" || values.controlTurno === "OK";
+  const controlTurnoOk =
+    form.maquina !== "Torno Hyundai" ||
+    values.controlTurno === "OK" ||
+    (hasPreviousShiftRecord && isEmptyValue(values.controlTurno));
   const overallOk = validation.every((v) => isQualityDailyValidationEmpty(v) || v.ok) && controlTurnoOk;
 
   const buildSheetId = (data) => {
@@ -1577,6 +1618,10 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
         return true;
       }
 
+      if (SHIFT_START_CHECK_IDS.includes(check.id) && isEmptyValue(value)) {
+        return true;
+      }
+
       if (check.type === "number") {
         const numeric = Number(value);
         return !Number.isNaN(numeric) && numeric >= check.min && numeric <= check.max;
@@ -1589,7 +1634,10 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
       return false;
     });
 
-    const controlTurnoOk = machineName !== "Torno Hyundai" || measurementValues?.controlTurno === "OK";
+    const controlTurnoOk =
+      machineName !== "Torno Hyundai" ||
+      measurementValues?.controlTurno === "OK" ||
+      isEmptyValue(measurementValues?.controlTurno);
 
     return checksOk && controlTurnoOk ? "OK" : "NO OK";
   };
@@ -2467,6 +2515,12 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                               </div>
                             )}
 
+                            {SHIFT_START_CHECK_IDS.includes(item.id) && (
+                              <div className="rounded-xl bg-amber-50 p-2 font-bold text-amber-800">
+                                Control de inicio de turno. Obligatorio solo en la primera pieza del turno.
+                              </div>
+                            )}
+
                             {item.comentario && (
                               <div className="rounded-xl bg-slate-100 p-2 text-slate-700">
                                 {item.comentario}
@@ -2484,7 +2538,13 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                               : "bg-red-100 text-red-700"
                           }`}
                         >
-                          {item.pendingQuality ? "Pendiente Calidad" : item.ok ? "OK" : "NO OK"}
+                          {item.pendingQuality
+                            ? "Pendiente Calidad"
+                            : item.pendingShiftStart
+                            ? "Inicio turno"
+                            : item.ok
+                            ? "OK"
+                            : "NO OK"}
                         </div>
                       )}
                     </div>
