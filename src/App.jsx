@@ -1121,7 +1121,10 @@ export default function App() {
     return formatDuration(seconds);
   }, [records, form.maquina, form.fecha, form.turno, nowMs]);
 
-  const hyundaiWaitInfo = useMemo(() => {
+  const hyundaiWaitInfo = {
+  blocked: false,
+  remainingMinutes: 0,
+};
     if (form.maquina !== "Torno Hyundai") {
       return { blocked: false, remainingMinutes: 0 };
     }
@@ -1416,17 +1419,7 @@ ${error?.message || String(error)}`);
       return;
     }
 
-    if (form.maquina === "Torno Hyundai" && hyundaiWaitInfo.blocked) {
-      alert(
-        `No ha transcurrido el tiempo suficiente entre registros. Deben pasar al menos 25 minutos entre verificaciones del Torno Hyundai dentro del mismo turno.
-
-Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
-      );
-
-      return;
-    }
-
-    const ahora = new Date();
+       const ahora = new Date();
 
     const row = {
       ...form,
