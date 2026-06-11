@@ -61,10 +61,6 @@ function getReferenceById(referenceId) {
   return REFERENCES.find((item) => item.id === referenceId) || REFERENCES[0];
 }
 
-function comparatorOptions(min = 20, max = 80) {
-  return Array.from({ length: max - min + 1 }, (_, index) => min + index);
-}
-
 const USERS = [
   {
     "username": "1001",
@@ -246,11 +242,8 @@ const MACHINES = {
       min: 38,
       max: 63,
       type: "number",
-      inputMode: "selectComparator",
-      selectMin: 20,
-      selectMax: 80,
       frecuencia:
-        "Registrar la pieza número 1, 16, 32, 48, 64, 80, 96 y 112.",
+        "Registrar la primera pieza del turno y después las piezas nº 16, 32, 48, 64, 80, 96 y 112.",
     },
     {
       id: "c40",
@@ -263,11 +256,8 @@ const MACHINES = {
       min: 38,
       max: 63,
       type: "number",
-      inputMode: "selectComparator",
-      selectMin: 20,
-      selectMax: 80,
       frecuencia:
-        "Registrar la pieza número 1, 16, 32, 48, 64, 80, 96 y 112.",
+        "Registrar la primera pieza del turno y después las piezas nº 16, 32, 48, 64, 80, 96 y 112.",
     },
     {
       id: "c50",
@@ -281,8 +271,11 @@ const MACHINES = {
       displayMin: "-2",
       displayMax: "-52",
       type: "number",
+      inputMode: "selectComparatorNeg",
+      selectMin: 20,
+      selectMax: 80,
       frecuencia:
-        "Registrar la pieza número 1, 16, 32, 48, 64, 80, 96 y 112.",
+        "Registrar la primera pieza del turno y después las piezas nº 16, 32, 48, 64, 80, 96 y 112.",
     },
     {
       id: "c60",
@@ -291,7 +284,7 @@ const MACHINES = {
         "Anillo comprobación [PT085]",
       type: "oknok",
       frecuencia:
-        "Registrar la pieza número 1, 16, 32, 48, 64, 80, 96 y 112.",
+        "Registrar la primera pieza del turno y después las piezas nº 16, 32, 48, 64, 80, 96 y 112.",
     },
     {
       id: "c160",
@@ -302,7 +295,7 @@ const MACHINES = {
         "Calibre PNP [CA231]",
       type: "oknok",
       frecuencia:
-        "Registrar la pieza número 1, 16, 32, 48, 64, 80, 96 y 112.",
+        "Registrar la primera pieza del turno y después las piezas nº 16, 32, 48, 64, 80, 96 y 112.",
     },
     {
       id: "c170",
@@ -313,7 +306,7 @@ const MACHINES = {
         "Calibre de rosca PNP [CR007] [CR008]",
       type: "oknok",
       frecuencia:
-        "Registrar la pieza número 1, 16, 32, 48, 64, 80, 96 y 112.",
+        "Registrar la primera pieza del turno y después las piezas nº 16, 32, 48, 64, 80, 96 y 112.",
     },
     {
       id: "c200",
@@ -323,8 +316,12 @@ const MACHINES = {
       min: 14.8,
       max: 15.2,
       type: "number",
+      inputMode: "selectRange",
+      rangeMin: 14.70,
+      rangeMax: 15.30,
+      rangeStep: 0.01,
       frecuencia:
-        "Registrar la pieza número 1, 16, 32, 48, 64, 80, 96 y 112.",
+        "Registrar la primera pieza del turno y después las piezas nº 16, 32, 48, 64, 80, 96 y 112.",
     },
     {
       id: "c230",
@@ -333,7 +330,7 @@ const MACHINES = {
         "Galga PNP [PT084]",
       type: "oknok",
       frecuencia:
-        "Registrar la pieza número 1, 16, 32, 48, 64, 80, 96 y 112.",
+        "Registrar la primera pieza del turno y después las piezas nº 16, 32, 48, 64, 80, 96 y 112.",
     },
     {
       id: "c240",
@@ -343,8 +340,12 @@ const MACHINES = {
       min: 101.9,
       max: 102.1,
       type: "number",
+      inputMode: "selectRange",
+      rangeMin: 101.80,
+      rangeMax: 102.20,
+      rangeStep: 0.01,
       frecuencia:
-        "Registrar la pieza número 1, 16, 32, 48, 64, 80, 96 y 112.",
+        "Registrar la primera pieza del turno y después las piezas nº 16, 32, 48, 64, 80, 96 y 112.",
     },
     {
       id: "c70",
@@ -354,8 +355,12 @@ const MACHINES = {
       min: 68.7,
       max: 69.3,
       type: "number",
+      inputMode: "selectRange",
+      rangeMin: 68.60,
+      rangeMax: 69.40,
+      rangeStep: 0.01,
       frecuencia:
-        "Registrar la pieza número 1.",
+        "Registrar únicamente la primera pieza del turno.",
     },
     {
       id: "c80",
@@ -365,8 +370,12 @@ const MACHINES = {
       min: 81.1,
       max: 81.7,
       type: "number",
+      inputMode: "selectRange",
+      rangeMin: 81.00,
+      rangeMax: 81.80,
+      rangeStep: 0.01,
       frecuencia:
-        "Registrar la pieza número 1.",
+        "Registrar únicamente la primera pieza del turno.",
     },
     {
       id: "c90",
@@ -376,8 +385,12 @@ const MACHINES = {
       min: 124.9,
       max: 125.1,
       type: "number",
+      inputMode: "selectRange",
+      rangeMin: 124.80,
+      rangeMax: 125.20,
+      rangeStep: 0.01,
       frecuencia:
-        "Registrar la pieza número 1.",
+        "Registrar únicamente la primera pieza del turno.",
     },
     {
       id: "c280",
@@ -388,7 +401,7 @@ const MACHINES = {
       max: 6.3,
       type: "number",
       frecuencia:
-        "Registrar una pieza cada 24 horas.",
+        "Registrar una pieza al día (cada 24 horas).",
     },
     {
       id: "c120",
@@ -399,7 +412,7 @@ const MACHINES = {
       max: 1.2,
       type: "number",
       frecuencia:
-        "Registrar una pieza cada 24 horas.",
+        "Registrar una pieza al día (cada 24 horas).",
     }
   ],
   "Centro NEWAY": [
@@ -410,7 +423,7 @@ const MACHINES = {
         "Calibre PNP [CA237]",
       type: "oknok",
       frecuencia:
-        "Registrar la pieza número 1, 16, 32, 48, 64, 80, 96 y 112.",
+        "Registrar la primera pieza del turno y después las piezas nº 16, 32, 48, 64, 80, 96 y 112.",
     },
     {
       id: "c330",
@@ -419,7 +432,7 @@ const MACHINES = {
         "Calibre PNP [CA236]",
       type: "oknok",
       frecuencia:
-        "Registrar la pieza número 1, 16, 32, 48, 64, 80, 96 y 112.",
+        "Registrar la primera pieza del turno y después las piezas nº 16, 32, 48, 64, 80, 96 y 112.",
     },
     {
       id: "c360",
@@ -428,7 +441,7 @@ const MACHINES = {
         "Galga [CA238] [CA240]",
       type: "oknok",
       frecuencia:
-        "Registrar la pieza número 1, 16, 32, 48, 64, 80, 96 y 112.",
+        "Registrar la primera pieza del turno y después las piezas nº 16, 32, 48, 64, 80, 96 y 112.",
     },
     {
       id: "c60neway",
@@ -437,7 +450,7 @@ const MACHINES = {
         "Anillo comprobación [PT087]",
       type: "oknok",
       frecuencia:
-        "Registrar la pieza número 1, 16, 32, 48, 64, 80, 96 y 112.",
+        "Registrar la primera pieza del turno y después las piezas nº 16, 32, 48, 64, 80, 96 y 112.",
     },
     
     {
@@ -1215,10 +1228,6 @@ export default function App() {
     : availableSheets.find((sheet) => sheet.id === selectedSheetId)?.name || "";
 
   const filteredRecords = records.filter((record) => {
-    const matchCurrentOperator =
-      !isVerificationUser(currentUser) ||
-      String(record.operario || "").startsWith(String(currentUser?.username || ""));
-
     const matchDate = !filterDate || record.fecha === filterDate;
     const matchTurno = !filterTurno || record.turno === filterTurno;
     const matchOperario =
@@ -1236,7 +1245,6 @@ export default function App() {
     const matchSheet = !activeSheetId || recordSheetId === activeSheetId;
 
     return (
-      matchCurrentOperator &&
       matchDate &&
       matchTurno &&
       matchOperario &&
@@ -1798,8 +1806,6 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
     return <LoginScreen onLogin={handleLogin} users={appUsers} />;
   }
 
-  const isOperatorView = isVerificationUser(currentUser);
-
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900">
       {showAdminPanel && isAdminUser(currentUser) && (
@@ -2106,50 +2112,11 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
           </div>
 
           <nav className="space-y-1.5">
-            <SidebarButton
-              active={activeView === "nueva"}
-              onClick={() => setActiveView("nueva")}
-              icon={<ClipboardCheck className="h-4 w-4" />}
-              label="Nueva verificación"
-            />
-
-            {isOperatorView ? (
-              <SidebarButton
-                active={activeView === "historico"}
-                onClick={() => setActiveView("historico")}
-                icon={<FileText className="h-4 w-4" />}
-                label="Mi historial"
-                badge={filteredRecords.length}
-              />
-            ) : (
-              <>
-                <SidebarButton
-                  active={activeView === "historico"}
-                  onClick={() => setActiveView("historico")}
-                  icon={<FileText className="h-4 w-4" />}
-                  label="Histórico"
-                  badge={filteredRecords.length}
-                />
-                <SidebarButton
-                  onClick={() => setShowRejectsModal(true)}
-                  icon={<AlertTriangle className="h-4 w-4" />}
-                  label="Rechazos"
-                  badge={rejectedRecords.length}
-                  danger
-                />
-                <SidebarButton
-                  onClick={() => setShowPdfModal(true)}
-                  icon={<Printer className="h-4 w-4" />}
-                  label="PDF registros"
-                />
-                <SidebarButton
-                  onClick={() => setShowCpkModal(true)}
-                  icon={<TrendingUp className="h-4 w-4" />}
-                  label="Gráfico CPK 30/40"
-                />
-              </>
-            )}
-
+            <SidebarButton active={activeView === "nueva"} onClick={() => setActiveView("nueva")} icon={<ClipboardCheck className="h-4 w-4" />} label="Nueva verificación" />
+            <SidebarButton active={activeView === "historico"} onClick={() => setActiveView("historico")} icon={<FileText className="h-4 w-4" />} label="Histórico" badge={filteredRecords.length} />
+            <SidebarButton onClick={() => setShowRejectsModal(true)} icon={<AlertTriangle className="h-4 w-4" />} label="Rechazos" badge={rejectedRecords.length} danger />
+            <SidebarButton onClick={() => setShowPdfModal(true)} icon={<Printer className="h-4 w-4" />} label="PDF registros" />
+            <SidebarButton onClick={() => setShowCpkModal(true)} icon={<TrendingUp className="h-4 w-4" />} label="Gráfico CPK 30/40" />
             {isAdminUser(currentUser) && (
               <SidebarButton
                 onClick={() => setShowAdminPanel(true)}
@@ -2159,8 +2126,6 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
             )}
           </nav>
 
-          {!isOperatorView && (
-            <>
           <div className="mt-3 rounded-2xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
             <div className="font-bold">Estado actual</div>
             <div className="mt-2 grid gap-1 text-xs">
@@ -2199,9 +2164,6 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
             </div>
           </div>
 
-            </>
-          )}
-
           <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-800">
             <div className="text-xs font-black uppercase tracking-wide text-slate-500">Usuario conectado</div>
             <div className="mt-2 font-black text-slate-900">{currentUser.name}</div>
@@ -2216,12 +2178,10 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
             </Button>
           </div>
 
-          {!isOperatorView && (
-            <Button onClick={exportExcel} className="mt-3 w-full rounded-2xl bg-[#1f6f73] text-white shadow-sm">
-              <Download className="mr-2 h-4 w-4" />
-              Exportar Excel
-            </Button>
-          )}
+          <Button onClick={exportExcel} className="mt-3 w-full rounded-2xl bg-[#1f6f73] text-white shadow-sm">
+            <Download className="mr-2 h-4 w-4" />
+            Exportar Excel
+          </Button>
         </aside>
 
         <main className="flex-1 space-y-6">
@@ -2493,15 +2453,12 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                             )}
 
                             {item.frecuencia && (
-                              <div className="rounded-2xl border border-blue-200 bg-blue-50 p-3 text-base font-bold leading-relaxed text-blue-900">
-                                <div className="mb-1 text-xs font-black uppercase tracking-wide text-blue-700">
-                                  Frecuencia de control
-                                </div>
-                                <div>{item.frecuencia}</div>
+                              <div className="rounded-xl bg-blue-50 p-2 font-medium text-blue-800">
+                                Frecuencia: {item.frecuencia}
                               </div>
                             )}
 
-                            {false && item.comentario && (
+                            {item.comentario && (
                               <div className="rounded-xl bg-slate-100 p-2 text-slate-700">
                                 {item.comentario}
                               </div>
@@ -2553,38 +2510,18 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                     </div>
 
                     {item.type === "number" ? (
-                      item.inputMode === "selectComparator" ? (
-                        <select
-                          className="input text-slate-900 font-bold"
-                          value={values[item.id] || ""}
-                          onChange={(e) =>
-                            setValues({
-                              ...values,
-                              [item.id]: e.target.value,
-                            })
-                          }
-                        >
-                          <option value="">Seleccionar lectura</option>
-                          {comparatorOptions(item.selectMin || 20, item.selectMax || 80).map((reading) => (
-                            <option key={reading} value={reading}>
-                              {reading >= 0 ? `+${reading}` : reading}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        <input
-                          type="number"
-                          step="0.001"
-                          className="input text-slate-900 font-bold"
-                          value={values[item.id] || ""}
-                          onChange={(e) =>
-                            setValues({
-                              ...values,
-                              [item.id]: e.target.value,
-                            })
-                          }
-                        />
-                      )
+                      <input
+                        type="number"
+                        step="0.001"
+                        className="input text-slate-900 font-bold"
+                                value={values[item.id] || ""}
+                        onChange={(e) =>
+                          setValues({
+                            ...values,
+                            [item.id]: e.target.value,
+                          })
+                        }
+                      />
                     ) : (
                       <select
                         className="input"
@@ -2657,7 +2594,6 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
             </CardContent>
           </Card>
 
-          {!isOperatorView && (
           <Card className="rounded-3xl border-0 shadow-lg">
             <CardContent className="space-y-5 p-6">
               <div className="flex items-start justify-between gap-4">
@@ -2719,7 +2655,6 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
               </div>
             </CardContent>
           </Card>
-          )}
           </>
 
           )}
@@ -2729,7 +2664,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
             <CardContent className="p-6">
               <div className="mb-5 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <h2 className="text-xl font-semibold">{isOperatorView ? "Mi historial" : "Histórico"}</h2>
+                  <h2 className="text-xl font-semibold">Histórico</h2>
 
                   <Button
                     size="sm"
@@ -3512,7 +3447,7 @@ function VisualHelpModal({ item, onClose }) {
                   {toleranceText}
                 </div>
 
-                {false && item.comentario && (
+                {item.comentario && (
                   <div style={{ borderRadius: "12px", backgroundColor: "white", padding: "12px" }}>
                     <strong>Útil / comentario: </strong>
                     {item.comentario}
