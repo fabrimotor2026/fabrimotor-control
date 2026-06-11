@@ -61,6 +61,10 @@ function getReferenceById(referenceId) {
   return REFERENCES.find((item) => item.id === referenceId) || REFERENCES[0];
 }
 
+function comparatorOptions(min = 20, max = 80) {
+  return Array.from({ length: max - min + 1 }, (_, index) => min + index);
+}
+
 const USERS = [
   {
     "username": "1001",
@@ -242,6 +246,9 @@ const MACHINES = {
       min: 38,
       max: 63,
       type: "number",
+      inputMode: "selectComparator",
+      selectMin: 20,
+      selectMax: 80,
       frecuencia:
         "Registrar la primera pieza del turno y después las piezas nº 16, 32, 48, 64, 80, 96 y 112.",
     },
@@ -256,6 +263,9 @@ const MACHINES = {
       min: 38,
       max: 63,
       type: "number",
+      inputMode: "selectComparator",
+      selectMin: 20,
+      selectMax: 80,
       frecuencia:
         "Registrar la primera pieza del turno y después las piezas nº 16, 32, 48, 64, 80, 96 y 112.",
     },
@@ -1236,14 +1246,7 @@ export default function App() {
     );
   });
 
-  const rejectedRecords = records.filter(
-    (record) =>
-      record.resultado === "NO OK" &&
-      (
-        !isVerificationUser(currentUser) ||
-        String(record.operario || "").startsWith(String(currentUser?.username || ""))
-      )
-  );
+  const rejectedRecords = records.filter((record) => record.resultado === "NO OK");
 
 
   const getRejectedChecks = (record) => {
@@ -1519,12 +1522,8 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
           .toLowerCase()
           .includes(pdfPieza.toLowerCase());
       const matchMaquina = !pdfMaquina || record.maquina === pdfMaquina;
-      const matchCurrentOperator =
-        !isVerificationUser(currentUser) ||
-        String(record.operario || "").startsWith(String(currentUser?.username || ""));
 
       return (
-        matchCurrentOperator &&
         matchFrom &&
         matchTo &&
         matchTurno &&
@@ -1554,17 +1553,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
           .toLowerCase()
           .includes(cpkOperario.toLowerCase());
 
-      const matchCurrentOperator =
-        !isVerificationUser(currentUser) ||
-        String(record.operario || "").startsWith(String(currentUser?.username || ""));
-
-      return (
-        matchCurrentOperator &&
-        matchFrom &&
-        matchTo &&
-        matchTurno &&
-        matchOperario
-      );
+      return matchFrom && matchTo && matchTurno && matchOperario;
     });
 
   const printPdfReport = () => {
@@ -2504,8 +2493,11 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                             )}
 
                             {item.frecuencia && (
-                              <div className="rounded-xl bg-blue-50 p-2 font-medium text-blue-800">
-                                Frecuencia: {item.frecuencia}
+                              <div className="rounded-2xl border border-blue-200 bg-blue-50 p-3 text-base font-bold leading-relaxed text-blue-900">
+                                <div className="mb-1 text-xs font-black uppercase tracking-wide text-blue-700">
+                                  Frecuencia de control
+                                </div>
+                                <div>{item.frecuencia}</div>
                               </div>
                             )}
 
@@ -2561,18 +2553,38 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                     </div>
 
                     {item.type === "number" ? (
-                      <input
-                        type="number"
-                        step="0.001"
-                        className="input text-slate-900 font-bold"
-                                value={values[item.id] || ""}
-                        onChange={(e) =>
-                          setValues({
-                            ...values,
-                            [item.id]: e.target.value,
-                          })
-                        }
-                      />
+                      item.inputMode === "selectComparator" ? (
+                        <select
+                          className="input text-slate-900 font-bold"
+                          value={values[item.id] || ""}
+                          onChange={(e) =>
+                            setValues({
+                              ...values,
+                              [item.id]: e.target.value,
+                            })
+                          }
+                        >
+                          <option value="">Seleccionar lectura</option>
+                          {comparatorOptions(item.selectMin || 20, item.selectMax || 80).map((reading) => (
+                            <option key={reading} value={reading}>
+                              {reading >= 0 ? `+${reading}` : reading}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          type="number"
+                          step="0.001"
+                          className="input text-slate-900 font-bold"
+                          value={values[item.id] || ""}
+                          onChange={(e) =>
+                            setValues({
+                              ...values,
+                              [item.id]: e.target.value,
+                            })
+                          }
+                        />
+                      )
                     ) : (
                       <select
                         className="input"
