@@ -74,7 +74,7 @@ function isQualityDailyValidationEmpty(check) {
   return isQualityDailyCheckEmptyById(check.id, check.value);
 }
 
-const SHIFT_START_CHECK_IDS = ["controlTurno", "c70", "c80", "c90"];
+const SHIFT_START_CHECK_IDS = ["controlTurno", "c70", "c80", "c90", "c340", "c370"];
 
 function isEmptyValue(value) {
   return value === undefined || value === null || value === "";
