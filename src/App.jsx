@@ -1125,30 +1125,6 @@ export default function App() {
   blocked: false,
   remainingMinutes: 0,
 };
-    if (form.maquina !== "Torno Hyundai") {
-      return { blocked: false, remainingMinutes: 0 };
-    }
-
-    const lastRecord = getLastHyundaiRecord();
-
-    if (!lastRecord) {
-      return { blocked: false, remainingMinutes: 0 };
-    }
-
-    const lastTime = getRecordTimeMs(lastRecord);
-
-    if (!lastTime) {
-      return { blocked: false, remainingMinutes: 0 };
-    }
-
-    const elapsedMinutes = (nowMs - lastTime) / (1000 * 60);
-    const remainingMinutes = Math.ceil(25 - elapsedMinutes);
-
-    return {
-      blocked: elapsedMinutes < 25,
-      remainingMinutes: remainingMinutes > 0 ? remainingMinutes : 0,
-    };
-  }, [form.maquina, form.fecha, form.turno, records, nowMs]);
 
   const checks = MACHINES[form.maquina];
 
@@ -1419,7 +1395,17 @@ ${error?.message || String(error)}`);
       return;
     }
 
-       const ahora = new Date();
+    if (form.maquina === "Torno Hyundai" && hyundaiWaitInfo.blocked) {
+      alert(
+        `No ha transcurrido el tiempo suficiente entre registros. Deben pasar al menos 25 minutos entre verificaciones del Torno Hyundai dentro del mismo turno.
+
+Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
+      );
+
+      return;
+    }
+
+    const ahora = new Date();
 
     const row = {
       ...form,
