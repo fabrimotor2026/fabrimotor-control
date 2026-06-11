@@ -65,6 +65,15 @@ function comparatorOptions(min = 20, max = 80) {
   return Array.from({ length: max - min + 1 }, (_, index) => min + index);
 }
 
+function rangeOptions(min, max, step = 0.01) {
+  const values = [];
+  for (let value = min; value <= max + 0.000001; value += step) {
+    values.push(Number(value.toFixed(2)));
+  }
+  return values;
+}
+
+
 const USERS = [
   {
     "username": "1001",
@@ -281,6 +290,9 @@ const MACHINES = {
       displayMin: "-2",
       displayMax: "-52",
       type: "number",
+      inputMode: "selectComparatorNegative",
+      selectMin: 20,
+      selectMax: 80,
       frecuencia:
         "Registrar la primera pieza del turno y después las piezas nº 16, 32, 48, 64, 80, 96 y 112.",
     },
@@ -323,6 +335,10 @@ const MACHINES = {
       min: 14.8,
       max: 15.2,
       type: "number",
+      inputMode: "selectRange",
+      rangeMin: 14.70,
+      rangeMax: 15.30,
+      rangeStep: 0.05,
       frecuencia:
         "Registrar la primera pieza del turno y después las piezas nº 16, 32, 48, 64, 80, 96 y 112.",
     },
@@ -343,6 +359,10 @@ const MACHINES = {
       min: 101.9,
       max: 102.1,
       type: "number",
+      inputMode: "selectRange",
+      rangeMin: 101.80,
+      rangeMax: 102.20,
+      rangeStep: 0.01,
       frecuencia:
         "Registrar la primera pieza del turno y después las piezas nº 16, 32, 48, 64, 80, 96 y 112.",
     },
@@ -354,6 +374,10 @@ const MACHINES = {
       min: 68.7,
       max: 69.3,
       type: "number",
+      inputMode: "selectRange",
+      rangeMin: 68.60,
+      rangeMax: 69.40,
+      rangeStep: 0.01,
       frecuencia:
         "Registrar únicamente la primera pieza del turno.",
     },
@@ -365,6 +389,10 @@ const MACHINES = {
       min: 81.1,
       max: 81.7,
       type: "number",
+      inputMode: "selectRange",
+      rangeMin: 81.00,
+      rangeMax: 81.80,
+      rangeStep: 0.01,
       frecuencia:
         "Registrar únicamente la primera pieza del turno.",
     },
@@ -376,6 +404,10 @@ const MACHINES = {
       min: 124.9,
       max: 125.1,
       type: "number",
+      inputMode: "selectRange",
+      rangeMin: 124.80,
+      rangeMax: 125.20,
+      rangeStep: 0.01,
       frecuencia:
         "Registrar únicamente la primera pieza del turno.",
     },
@@ -2567,7 +2599,43 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                           <option value="">Seleccionar lectura</option>
                           {comparatorOptions(item.selectMin || 20, item.selectMax || 80).map((reading) => (
                             <option key={reading} value={reading}>
-                              {reading >= 0 ? `+${reading}` : reading}
+                              +{reading}
+                            </option>
+                          ))}
+                        </select>
+                      ) : item.inputMode === "selectComparatorNegative" ? (
+                        <select
+                          className="input text-slate-900 font-bold"
+                          value={values[item.id] || ""}
+                          onChange={(e) =>
+                            setValues({
+                              ...values,
+                              [item.id]: e.target.value,
+                            })
+                          }
+                        >
+                          <option value="">Seleccionar lectura</option>
+                          {comparatorOptions(item.selectMin || 20, item.selectMax || 80).map((reading) => (
+                            <option key={reading} value={-reading}>
+                              -{reading}
+                            </option>
+                          ))}
+                        </select>
+                      ) : item.inputMode === "selectRange" ? (
+                        <select
+                          className="input text-slate-900 font-bold"
+                          value={values[item.id] || ""}
+                          onChange={(e) =>
+                            setValues({
+                              ...values,
+                              [item.id]: e.target.value,
+                            })
+                          }
+                        >
+                          <option value="">Seleccionar lectura</option>
+                          {rangeOptions(item.rangeMin, item.rangeMax, item.rangeStep || 0.01).map((reading) => (
+                            <option key={reading} value={reading.toFixed(2)}>
+                              {reading.toFixed(2)}
                             </option>
                           ))}
                         </select>
