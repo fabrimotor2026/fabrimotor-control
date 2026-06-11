@@ -1236,7 +1236,14 @@ export default function App() {
     );
   });
 
-  const rejectedRecords = records.filter((record) => record.resultado === "NO OK");
+  const rejectedRecords = records.filter(
+    (record) =>
+      record.resultado === "NO OK" &&
+      (
+        !isVerificationUser(currentUser) ||
+        String(record.operario || "").startsWith(String(currentUser?.username || ""))
+      )
+  );
 
 
   const getRejectedChecks = (record) => {
@@ -1512,8 +1519,12 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
           .toLowerCase()
           .includes(pdfPieza.toLowerCase());
       const matchMaquina = !pdfMaquina || record.maquina === pdfMaquina;
+      const matchCurrentOperator =
+        !isVerificationUser(currentUser) ||
+        String(record.operario || "").startsWith(String(currentUser?.username || ""));
 
       return (
+        matchCurrentOperator &&
         matchFrom &&
         matchTo &&
         matchTurno &&
@@ -1543,7 +1554,17 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
           .toLowerCase()
           .includes(cpkOperario.toLowerCase());
 
-      return matchFrom && matchTo && matchTurno && matchOperario;
+      const matchCurrentOperator =
+        !isVerificationUser(currentUser) ||
+        String(record.operario || "").startsWith(String(currentUser?.username || ""));
+
+      return (
+        matchCurrentOperator &&
+        matchFrom &&
+        matchTo &&
+        matchTurno &&
+        matchOperario
+      );
     });
 
   const printPdfReport = () => {
