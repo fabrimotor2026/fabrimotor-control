@@ -61,18 +61,6 @@ function getReferenceById(referenceId) {
   return REFERENCES.find((item) => item.id === referenceId) || REFERENCES[0];
 }
 
-function comparatorOptions(min = 20, max = 80) {
-  return Array.from({ length: max - min + 1 }, (_, index) => min + index);
-}
-
-function rangeOptions(min, max, step = 0.01) {
-  const values = [];
-  for (let value = min; value <= max + 0.000001; value += step) {
-    values.push(Number(value.toFixed(2)));
-  }
-  return values;
-}
-
 const USERS = [
   {
     "username": "1001",
@@ -283,7 +271,7 @@ const MACHINES = {
       displayMin: "-2",
       displayMax: "-52",
       type: "number",
-      inputMode: "selectComparatorNegative",
+      inputMode: "selectComparatorNeg",
       selectMin: 20,
       selectMax: 80,
       frecuencia:
@@ -331,7 +319,7 @@ const MACHINES = {
       inputMode: "selectRange",
       rangeMin: 14.70,
       rangeMax: 15.30,
-      rangeStep: 0.05,
+      rangeStep: 0.01,
       frecuencia:
         "Registrar la primera pieza del turno y después las piezas nº 16, 32, 48, 64, 80, 96 y 112.",
     },
@@ -2099,7 +2087,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
   }}
 >
   <h1 className="text-3xl font-black tracking-tight text-slate-900 leading-tight">
-    F-1012 ·<br />
+    F-1012<br />
     Célula B
   </h1>
 </div>
@@ -2522,74 +2510,18 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                     </div>
 
                     {item.type === "number" ? (
-                      item.inputMode === "selectComparator" ? (
-                        <select
-                          className="input text-slate-900 font-bold"
-                          value={values[item.id] || ""}
-                          onChange={(e) =>
-                            setValues({
-                              ...values,
-                              [item.id]: e.target.value,
-                            })
-                          }
-                        >
-                          <option value="">Seleccionar lectura</option>
-                          {comparatorOptions(item.selectMin || 20, item.selectMax || 80).map((reading) => (
-                            <option key={reading} value={reading}>
-                              +{reading}
-                            </option>
-                          ))}
-                        </select>
-                      ) : item.inputMode === "selectComparatorNegative" ? (
-                        <select
-                          className="input text-slate-900 font-bold"
-                          value={values[item.id] || ""}
-                          onChange={(e) =>
-                            setValues({
-                              ...values,
-                              [item.id]: e.target.value,
-                            })
-                          }
-                        >
-                          <option value="">Seleccionar lectura</option>
-                          {comparatorOptions(item.selectMin || 20, item.selectMax || 80).map((reading) => (
-                            <option key={reading} value={-reading}>
-                              -{reading}
-                            </option>
-                          ))}
-                        </select>
-                      ) : item.inputMode === "selectRange" ? (
-                        <select
-                          className="input text-slate-900 font-bold"
-                          value={values[item.id] || ""}
-                          onChange={(e) =>
-                            setValues({
-                              ...values,
-                              [item.id]: e.target.value,
-                            })
-                          }
-                        >
-                          <option value="">Seleccionar lectura</option>
-                          {rangeOptions(item.rangeMin, item.rangeMax, item.rangeStep || 0.01).map((reading) => (
-                            <option key={reading} value={reading.toFixed(2)}>
-                              {reading.toFixed(2)}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        <input
-                          type="number"
-                          step="0.001"
-                          className="input text-slate-900 font-bold"
-                          value={values[item.id] || ""}
-                          onChange={(e) =>
-                            setValues({
-                              ...values,
-                              [item.id]: e.target.value,
-                            })
-                          }
-                        />
-                      )
+                      <input
+                        type="number"
+                        step="0.001"
+                        className="input text-slate-900 font-bold"
+                                value={values[item.id] || ""}
+                        onChange={(e) =>
+                          setValues({
+                            ...values,
+                            [item.id]: e.target.value,
+                          })
+                        }
+                      />
                     ) : (
                       <select
                         className="input"
