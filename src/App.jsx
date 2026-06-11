@@ -257,7 +257,7 @@ const MACHINES = {
       type: "number",
       inputMode: "selectComparator",
       selectMin: 20,
-      selectMax: 80,
+      selectMax: 63,
       frecuencia:
         "Registrar la primera pieza del turno y después las piezas nº 16, 32, 48, 64, 80, 96 y 112.",
     },
@@ -274,7 +274,7 @@ const MACHINES = {
       type: "number",
       inputMode: "selectComparator",
       selectMin: 20,
-      selectMax: 80,
+      selectMax: 63,
       frecuencia:
         "Registrar la primera pieza del turno y después las piezas nº 16, 32, 48, 64, 80, 96 y 112.",
     },
@@ -2617,7 +2617,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                           <option value="">Seleccionar lectura</option>
                           {comparatorOptions(item.selectMin || 20, item.selectMax || 80).map((reading) => (
                             <option key={reading} value={reading}>
-                              {reading > 0 ? `+${reading}` : reading}
+                              `+${reading}`
                             </option>
                           ))}
                         </select>
