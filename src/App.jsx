@@ -52,9 +52,9 @@ const USER_ROLES = [
 const REFERENCES = [
   { id: "F-1012", label: "F-1012 · Célula B", celula: "Célula B" },
   { id: "F-1013", label: "F-1013 · Célula A", celula: "Célula A" },
-  { id: "F-1025", label: "F-1025"},
-  { id: "F-1026", label: "F-1026"},
-  { id: "F-1029", label: "F-1029"},
+  { id: "F-1025", label: "F-1025 · Célula A", celula: "Célula A" },
+  { id: "F-1026", label: "F-1026 · Célula A", celula: "Célula A" },
+  { id: "F-1029", label: "F-1029 · Célula A", celula: "Célula A" },
 ];
 
 function getReferenceById(referenceId) {
@@ -757,14 +757,19 @@ function LoginScreen({ onLogin, users = getStoredUsers() }) {
         <img
           src="/logo-fabrimotor.png"
           alt="FabriMotor"
-          className="mb-8 h-20 w-auto object-contain"
+          className="mb-8 h-16 w-auto object-contain"
         />
 
         <div className="mb-6">
+          <div className="inline-flex rounded-full bg-[#e6f4f4] px-3 py-1 text-xs font-black uppercase tracking-wide text-[#1f6f73] ring-1 ring-[#b8dada]">
+            Acceso seguro
+          </div>
           <h1 className="mt-4 text-3xl font-black tracking-tight text-slate-900">
-            CONTROL DE PROCESO
+            Sistema de verificaciones
           </h1>
-
+          <p className="mt-2 text-sm text-slate-600">
+            Introduce usuario y contraseña para acceder al control F-1012 · Célula  B.
+          </p>
         </div>
 
         <label className="mb-4 block">
@@ -801,16 +806,9 @@ function LoginScreen({ onLogin, users = getStoredUsers() }) {
           </div>
         )}
 
-        <Button
-  type="submit"
-  className="w-full rounded-2xl py-5 text-base font-black shadow-lg"
-  style={{
-    backgroundColor: "#0F5C63",
-    color: "#ffffff",
-  }}
->
-  Entrar
-</Button>
+        <Button type="submit" className="w-full rounded-2xl bg-blue-700 py-5 text-base font-black text-white shadow-lg">
+          Entrar
+        </Button>
 
         <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-xs text-slate-600">
           <div className="font-black text-slate-800">Acceso</div>
@@ -1121,10 +1119,37 @@ export default function App() {
     return formatDuration(seconds);
   }, [records, form.maquina, form.fecha, form.turno, nowMs]);
 
-  const hyundaiWaitInfo = {
-  blocked: false,
-  remainingMinutes: 0,
-};
+  const hyundaiWaitInfo = useMemo(() => {
+    const machineName = String(form.maquina || "").toLowerCase();
+
+    const has25MinuteRule =
+      machineName.includes("torno hyundai") ||
+      machineName.includes("neway");
+
+    if (!has25MinuteRule) {
+      return { blocked: false, remainingMinutes: 0 };
+    }
+
+    const lastRecord = getLastRecordForCurrentContext();
+
+    if (!lastRecord) {
+      return { blocked: false, remainingMinutes: 0 };
+    }
+
+    const lastTime = getRecordTimeMs(lastRecord);
+
+    if (!lastTime) {
+      return { blocked: false, remainingMinutes: 0 };
+    }
+
+    const elapsedMinutes = (nowMs - lastTime) / (1000 * 60);
+    const remainingMinutes = Math.ceil(25 - elapsedMinutes);
+
+    return {
+      blocked: elapsedMinutes < 25,
+      remainingMinutes: remainingMinutes > 0 ? remainingMinutes : 0,
+    };
+  }, [form.maquina, form.fecha, form.turno, form.operario, records, nowMs]);
 
   const checks = MACHINES[form.maquina];
 
@@ -1204,11 +1229,12 @@ export default function App() {
     ? currentSheetName
     : availableSheets.find((sheet) => sheet.id === selectedSheetId)?.name || "";
 
-  const filteredRecords = records.filter((record) => {
-    const matchCurrentOperator =
-      !isVerificationUser(currentUser) ||
-      String(record.operario || "").startsWith(String(currentUser?.username || ""));
 
+  const isOwnRecordForCurrentUser = (record) =>
+    !isVerificationUser(currentUser) ||
+    String(record.operario || "").startsWith(String(currentUser?.username || ""));
+  const filteredRecords = records.filter((record) => {
+      if (!isOwnRecordForCurrentUser(record)) return false;
     const matchDate = !filterDate || record.fecha === filterDate;
     const matchTurno = !filterTurno || record.turno === filterTurno;
     const matchOperario =
@@ -1226,7 +1252,6 @@ export default function App() {
     const matchSheet = !activeSheetId || recordSheetId === activeSheetId;
 
     return (
-      matchCurrentOperator &&
       matchDate &&
       matchTurno &&
       matchOperario &&
@@ -1236,7 +1261,7 @@ export default function App() {
     );
   });
 
-  const rejectedRecords = records.filter((record) => record.resultado === "NO OK");
+  const rejectedRecords = records.filter((record) => isOwnRecordForCurrentUser(record) && record.resultado === "NO OK");
 
 
   const getRejectedChecks = (record) => {
@@ -1400,9 +1425,11 @@ ${error?.message || String(error)}`);
       return;
     }
 
-    if (form.maquina === "Torno Hyundai" && hyundaiWaitInfo.blocked) {
+    if (hyundaiWaitInfo.blocked) {
       alert(
-        `No ha transcurrido el tiempo suficiente entre registros. Deben pasar al menos 25 minutos entre verificaciones del Torno Hyundai dentro del mismo turno.
+        `No ha transcurrido el tiempo suficiente entre registros.
+
+Deben pasar al menos 25 minutos entre verificaciones del mismo operario y máquina.
 
 Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
       );
@@ -1532,6 +1559,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
     pdfFilteredRecords.filter((record) => record.maquina === machineName);
 
   const cpkFilteredRecords = records
+    .filter((record) => isOwnRecordForCurrentUser(record))
     .filter((record) => record.maquina === "Torno Hyundai")
     .filter((record) => {
       const matchFrom = !cpkDateFrom || record.fecha >= cpkDateFrom;
@@ -1788,8 +1816,6 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
     return <LoginScreen onLogin={handleLogin} users={appUsers} />;
   }
 
-  const isOperatorView = isVerificationUser(currentUser);
-
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900">
       {showAdminPanel && isAdminUser(currentUser) && (
@@ -2007,12 +2033,12 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                 onChange={(event) => setStartupReference(event.target.value)}
               >
                {REFERENCES
-  .filter((reference) => reference.id === "F-1012")
-  .map((reference) => (
-    <option key={reference.id} value={reference.id}>
-      {reference.label}
-    </option>
-  ))}
+                .filter((reference) => reference.id === "F-1012")
+                .map((reference) => (
+                  <option key={reference.id} value={reference.id}>
+                    {reference.label}
+                  </option>
+                ))}
               </select>
             </label>
 
@@ -2044,7 +2070,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
             <Button
               type="button"
               onClick={confirmProductionStart}
-              className="w-full rounded-2xl bg-[#0f5c63] py-5 text-base font-black text-white shadow-lg"
+              className="w-full rounded-2xl bg-blue-700 py-5 text-base font-black text-white shadow-lg"
             >
               Continuar
             </Button>
@@ -2055,26 +2081,14 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
         <aside className="max-h-[calc(100vh-24px)] overflow-y-auto overscroll-contain rounded-3xl border border-slate-200 bg-white p-4 shadow-xl lg:sticky lg:top-6 lg:h-[calc(100vh-48px)] lg:w-72 lg:shrink-0">
           <div className="mb-5 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div
-             style={{
-  background: "linear-gradient(135deg,#BDECB6 0%,#A8E09F 100%)",
-}}
+              style={{
+                background: "linear-gradient(135deg,#0f5c63 0%,#2b8e96 45%,#6cc8d2 100%)",
+                padding: "22px",
+              }}
             >
-              <div
-  style={{
-    background: "#BDECB6",
-    padding: "22px",
-    minHeight: "120px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    textAlign: "center",
-  }}
->
-  <h1 className="text-3xl font-black tracking-tight text-slate-900 leading-tight">
-    F-1012<br />
-    Célula B
-  </h1>
-</div>
+              <h1 className="text-4xl font-black tracking-tight text-white">
+                F-1012 · Célula B
+              </h1>
             </div>
 
             <div className="p-4">
@@ -2089,57 +2103,18 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                 Control digital
               </div>
 
-              <p className="mt-4 text-sm font-medium text-[#0F172A]">
+              <p className="mt-4 text-sm font-medium text-slate-600">
                 Control de proceso · Producción
               </p>
             </div>
           </div>
 
           <nav className="space-y-1.5">
-            <SidebarButton
-              active={activeView === "nueva"}
-              onClick={() => setActiveView("nueva")}
-              icon={<ClipboardCheck className="h-4 w-4" />}
-              label="Nueva verificación"
-            />
-
-            {isOperatorView ? (
-              <SidebarButton
-                active={activeView === "historico"}
-                onClick={() => setActiveView("historico")}
-                icon={<FileText className="h-4 w-4" />}
-                label="Mi historial"
-                badge={filteredRecords.length}
-              />
-            ) : (
-              <>
-                <SidebarButton
-                  active={activeView === "historico"}
-                  onClick={() => setActiveView("historico")}
-                  icon={<FileText className="h-4 w-4" />}
-                  label="Histórico"
-                  badge={filteredRecords.length}
-                />
-                <SidebarButton
-                  onClick={() => setShowRejectsModal(true)}
-                  icon={<AlertTriangle className="h-4 w-4" />}
-                  label="Rechazos"
-                  badge={rejectedRecords.length}
-                  danger
-                />
-                <SidebarButton
-                  onClick={() => setShowPdfModal(true)}
-                  icon={<Printer className="h-4 w-4" />}
-                  label="PDF registros"
-                />
-                <SidebarButton
-                  onClick={() => setShowCpkModal(true)}
-                  icon={<TrendingUp className="h-4 w-4" />}
-                  label="Gráfico CPK 30/40"
-                />
-              </>
-            )}
-
+            <SidebarButton active={activeView === "nueva"} onClick={() => setActiveView("nueva")} icon={<ClipboardCheck className="h-4 w-4" />} label="Nueva verificación" />
+            <SidebarButton active={activeView === "historico"} onClick={() => setActiveView("historico")} icon={<FileText className="h-4 w-4" />} label="Histórico" badge={filteredRecords.length} />
+            <SidebarButton onClick={() => setShowRejectsModal(true)} icon={<AlertTriangle className="h-4 w-4" />} label="Rechazos" badge={rejectedRecords.length} danger />
+            <SidebarButton onClick={() => setShowPdfModal(true)} icon={<Printer className="h-4 w-4" />} label="PDF registros" />
+            <SidebarButton onClick={() => setShowCpkModal(true)} icon={<TrendingUp className="h-4 w-4" />} label="Gráfico CPK 30/40" />
             {isAdminUser(currentUser) && (
               <SidebarButton
                 onClick={() => setShowAdminPanel(true)}
@@ -2149,8 +2124,6 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
             )}
           </nav>
 
-          {!isOperatorView && (
-            <>
           <div className="mt-3 rounded-2xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
             <div className="font-bold">Estado actual</div>
             <div className="mt-2 grid gap-1 text-xs">
@@ -2189,9 +2162,6 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
             </div>
           </div>
 
-            </>
-          )}
-
           <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-800">
             <div className="text-xs font-black uppercase tracking-wide text-slate-500">Usuario conectado</div>
             <div className="mt-2 font-black text-slate-900">{currentUser.name}</div>
@@ -2206,12 +2176,10 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
             </Button>
           </div>
 
-          {!isOperatorView && (
-            <Button onClick={exportExcel} className="mt-3 w-full rounded-2xl bg-[#1f6f73] text-white shadow-sm">
-              <Download className="mr-2 h-4 w-4" />
-              Exportar Excel
-            </Button>
-          )}
+          <Button onClick={exportExcel} className="mt-3 w-full rounded-2xl bg-[#1f6f73] text-white shadow-sm">
+            <Download className="mr-2 h-4 w-4" />
+            Exportar Excel
+          </Button>
         </aside>
 
         <main className="flex-1 space-y-6">
@@ -2624,7 +2592,6 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
             </CardContent>
           </Card>
 
-          {!isOperatorView && (
           <Card className="rounded-3xl border-0 shadow-lg">
             <CardContent className="space-y-5 p-6">
               <div className="flex items-start justify-between gap-4">
@@ -2686,7 +2653,6 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
               </div>
             </CardContent>
           </Card>
-          )}
           </>
 
           )}
@@ -2696,7 +2662,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
             <CardContent className="p-6">
               <div className="mb-5 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <h2 className="text-xl font-semibold">{isOperatorView ? "Mi historial" : "Histórico"}</h2>
+                  <h2 className="text-xl font-semibold">Histórico</h2>
 
                   <Button
                     size="sm"
