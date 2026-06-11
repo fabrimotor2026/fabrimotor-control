@@ -250,7 +250,7 @@ const MACHINES = {
       selectMin: 20,
       selectMax: 80,
       frecuencia:
-        "Registrar la primera pieza del turno y después las piezas nº 16, 32, 48, 64, 80, 96 y 112.",
+        "Registrar la pieza número 1, 16, 32, 48, 64, 80, 96 y 112.",
     },
     {
       id: "c40",
@@ -267,7 +267,7 @@ const MACHINES = {
       selectMin: 20,
       selectMax: 80,
       frecuencia:
-        "Registrar la primera pieza del turno y después las piezas nº 16, 32, 48, 64, 80, 96 y 112.",
+        "Registrar la pieza número 1, 16, 32, 48, 64, 80, 96 y 112.",
     },
     {
       id: "c50",
@@ -282,7 +282,7 @@ const MACHINES = {
       displayMax: "-52",
       type: "number",
       frecuencia:
-        "Registrar la primera pieza del turno y después las piezas nº 16, 32, 48, 64, 80, 96 y 112.",
+        "Registrar la pieza número 1, 16, 32, 48, 64, 80, 96 y 112.",
     },
     {
       id: "c60",
@@ -291,7 +291,7 @@ const MACHINES = {
         "Anillo comprobación [PT085]",
       type: "oknok",
       frecuencia:
-        "Registrar la primera pieza del turno y después las piezas nº 16, 32, 48, 64, 80, 96 y 112.",
+        "Registrar la pieza número 1, 16, 32, 48, 64, 80, 96 y 112.",
     },
     {
       id: "c160",
@@ -302,7 +302,7 @@ const MACHINES = {
         "Calibre PNP [CA231]",
       type: "oknok",
       frecuencia:
-        "Registrar la primera pieza del turno y después las piezas nº 16, 32, 48, 64, 80, 96 y 112.",
+        "Registrar la pieza número 1, 16, 32, 48, 64, 80, 96 y 112.",
     },
     {
       id: "c170",
@@ -313,7 +313,7 @@ const MACHINES = {
         "Calibre de rosca PNP [CR007] [CR008]",
       type: "oknok",
       frecuencia:
-        "Registrar la primera pieza del turno y después las piezas nº 16, 32, 48, 64, 80, 96 y 112.",
+        "Registrar la pieza número 1, 16, 32, 48, 64, 80, 96 y 112.",
     },
     {
       id: "c200",
@@ -324,7 +324,7 @@ const MACHINES = {
       max: 15.2,
       type: "number",
       frecuencia:
-        "Registrar la primera pieza del turno y después las piezas nº 16, 32, 48, 64, 80, 96 y 112.",
+        "Registrar la pieza número 1, 16, 32, 48, 64, 80, 96 y 112.",
     },
     {
       id: "c230",
@@ -333,7 +333,7 @@ const MACHINES = {
         "Galga PNP [PT084]",
       type: "oknok",
       frecuencia:
-        "Registrar la primera pieza del turno y después las piezas nº 16, 32, 48, 64, 80, 96 y 112.",
+        "Registrar la pieza número 1, 16, 32, 48, 64, 80, 96 y 112.",
     },
     {
       id: "c240",
@@ -344,7 +344,7 @@ const MACHINES = {
       max: 102.1,
       type: "number",
       frecuencia:
-        "Registrar la primera pieza del turno y después las piezas nº 16, 32, 48, 64, 80, 96 y 112.",
+        "Registrar la pieza número 1, 16, 32, 48, 64, 80, 96 y 112.",
     },
     {
       id: "c70",
@@ -355,7 +355,7 @@ const MACHINES = {
       max: 69.3,
       type: "number",
       frecuencia:
-        "Registrar únicamente la primera pieza del turno.",
+        "Registrar la pieza número 1.",
     },
     {
       id: "c80",
@@ -366,7 +366,7 @@ const MACHINES = {
       max: 81.7,
       type: "number",
       frecuencia:
-        "Registrar únicamente la primera pieza del turno.",
+        "Registrar la pieza número 1.",
     },
     {
       id: "c90",
@@ -377,7 +377,7 @@ const MACHINES = {
       max: 125.1,
       type: "number",
       frecuencia:
-        "Registrar únicamente la primera pieza del turno.",
+        "Registrar la pieza número 1.",
     },
     {
       id: "c280",
@@ -388,7 +388,7 @@ const MACHINES = {
       max: 6.3,
       type: "number",
       frecuencia:
-        "Registrar una pieza al día (cada 24 horas).",
+        "Registrar una pieza cada 24 horas.",
     },
     {
       id: "c120",
@@ -399,7 +399,7 @@ const MACHINES = {
       max: 1.2,
       type: "number",
       frecuencia:
-        "Registrar una pieza al día (cada 24 horas).",
+        "Registrar una pieza cada 24 horas.",
     }
   ],
   "Centro NEWAY": [
@@ -410,7 +410,7 @@ const MACHINES = {
         "Calibre PNP [CA237]",
       type: "oknok",
       frecuencia:
-        "Registrar la primera pieza del turno y después las piezas nº 16, 32, 48, 64, 80, 96 y 112.",
+        "Registrar la pieza número 1, 16, 32, 48, 64, 80, 96 y 112.",
     },
     {
       id: "c330",
@@ -419,7 +419,7 @@ const MACHINES = {
         "Calibre PNP [CA236]",
       type: "oknok",
       frecuencia:
-        "Registrar la primera pieza del turno y después las piezas nº 16, 32, 48, 64, 80, 96 y 112.",
+        "Registrar la pieza número 1, 16, 32, 48, 64, 80, 96 y 112.",
     },
     {
       id: "c360",
@@ -428,7 +428,7 @@ const MACHINES = {
         "Galga [CA238] [CA240]",
       type: "oknok",
       frecuencia:
-        "Registrar la primera pieza del turno y después las piezas nº 16, 32, 48, 64, 80, 96 y 112.",
+        "Registrar la pieza número 1, 16, 32, 48, 64, 80, 96 y 112.",
     },
     {
       id: "c60neway",
@@ -437,7 +437,7 @@ const MACHINES = {
         "Anillo comprobación [PT087]",
       type: "oknok",
       frecuencia:
-        "Registrar la primera pieza del turno y después las piezas nº 16, 32, 48, 64, 80, 96 y 112.",
+        "Registrar la pieza número 1, 16, 32, 48, 64, 80, 96 y 112.",
     },
     
     {
@@ -2501,7 +2501,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                               </div>
                             )}
 
-                            {item.comentario && (
+                            {false && item.comentario && (
                               <div className="rounded-xl bg-slate-100 p-2 text-slate-700">
                                 {item.comentario}
                               </div>
@@ -3512,7 +3512,7 @@ function VisualHelpModal({ item, onClose }) {
                   {toleranceText}
                 </div>
 
-                {item.comentario && (
+                {false && item.comentario && (
                   <div style={{ borderRadius: "12px", backgroundColor: "white", padding: "12px" }}>
                     <strong>Útil / comentario: </strong>
                     {item.comentario}
