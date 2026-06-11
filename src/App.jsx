@@ -50,7 +50,7 @@ const USER_ROLES = [
 ];
 
 const REFERENCES = [
-  { id: "F-1012", label: "F-1012 · Célula B", celula: "Célula B" },
+  { id: "F-1012", label: "F-1012\nCélula B", celula: "Célula B" },
   { id: "F-1013", label: "F-1013 · Célula A", celula: "Célula A" },
   { id: "F-1025", label: "F-1025"},
   { id: "F-1026", label: "F-1026"},
@@ -526,7 +526,7 @@ function createRecordId() {
 function initialForm() {
   return {
     referencia: "F-1012",
-    referenciaNombre: "F-1012 · Célula B",
+    referenciaNombre: "F-1012\nCélula B",
     maquina: "Torno Hyundai",
     fecha: today(),
     turno: "M",
@@ -1522,7 +1522,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
 
     records.forEach((r) => {
       const row = {
-        Referencia: r.referenciaNombre || r.referencia || "F-1012 · Célula B",
+        Referencia: r.referenciaNombre || r.referencia || "F-1012\nCélula B",
         Fecha: r.fecha,
         Máquina: r.maquina,
         "Hoja verificación": buildSheetName(r) || r.hojaNombre,
@@ -1726,7 +1726,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
       ...previous,
       operario: `${user.username} - ${user.name.trim()}`,
       referencia: "F-1012",
-      referenciaNombre: "F-1012 · Célula B",
+      referenciaNombre: "F-1012\nCélula B",
       numeroPieza: "",
       ordenFabricacion: "",
     }));
@@ -4435,7 +4435,7 @@ function PdfMachineReport({ title, machineName, records }) {
           {title}
         </div>
         <div className="border-t border-black px-3 py-1 text-sm font-semibold">
-          Control proceso F-1012 · Célula B · Mediciones registradas
+          Control proceso F-1012\nCélula B · Mediciones registradas
         </div>
       </div>
 
