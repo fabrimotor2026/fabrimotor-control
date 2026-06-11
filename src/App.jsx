@@ -52,9 +52,9 @@ const USER_ROLES = [
 const REFERENCES = [
   { id: "F-1012", label: "F-1012 · Célula B", celula: "Célula B" },
   { id: "F-1013", label: "F-1013 · Célula A", celula: "Célula A" },
-  { id: "F-1025", label: "F-1025 · Célula A", celula: "Célula A" },
-  { id: "F-1026", label: "F-1026 · Célula A", celula: "Célula A" },
-  { id: "F-1029", label: "F-1029 · Célula A", celula: "Célula A" },
+  { id: "F-1025", label: "F-1025"},
+  { id: "F-1026", label: "F-1026"},
+  { id: "F-1029", label: "F-1029"},
 ];
 
 function getReferenceById(referenceId) {
@@ -757,19 +757,14 @@ function LoginScreen({ onLogin, users = getStoredUsers() }) {
         <img
           src="/logo-fabrimotor.png"
           alt="FabriMotor"
-          className="mb-8 h-16 w-auto object-contain"
+          className="mb-8 h-20 w-auto object-contain"
         />
 
         <div className="mb-6">
-          <div className="inline-flex rounded-full bg-[#e6f4f4] px-3 py-1 text-xs font-black uppercase tracking-wide text-[#1f6f73] ring-1 ring-[#b8dada]">
-            Acceso seguro
-          </div>
           <h1 className="mt-4 text-3xl font-black tracking-tight text-slate-900">
-            Sistema de verificaciones
+            CONTROL DE PROCESO
           </h1>
-          <p className="mt-2 text-sm text-slate-600">
-            Introduce usuario y contraseña para acceder al control F-1012 · Célula  B.
-          </p>
+
         </div>
 
         <label className="mb-4 block">
@@ -806,9 +801,16 @@ function LoginScreen({ onLogin, users = getStoredUsers() }) {
           </div>
         )}
 
-        <Button type="submit" className="w-full rounded-2xl bg-blue-700 py-5 text-base font-black text-white shadow-lg">
-          Entrar
-        </Button>
+        <Button
+  type="submit"
+  className="w-full rounded-2xl py-5 text-base font-black shadow-lg"
+  style={{
+    backgroundColor: "#0F5C63",
+    color: "#ffffff",
+  }}
+>
+  Entrar
+</Button>
 
         <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-xs text-slate-600">
           <div className="font-black text-slate-800">Acceso</div>
@@ -1119,37 +1121,10 @@ export default function App() {
     return formatDuration(seconds);
   }, [records, form.maquina, form.fecha, form.turno, nowMs]);
 
-  const hyundaiWaitInfo = useMemo(() => {
-    const machineName = String(form.maquina || "").toLowerCase();
-
-    const has25MinuteRule =
-      machineName.includes("torno hyundai") ||
-      machineName.includes("neway");
-
-    if (!has25MinuteRule) {
-      return { blocked: false, remainingMinutes: 0 };
-    }
-
-    const lastRecord = getLastRecordForCurrentContext();
-
-    if (!lastRecord) {
-      return { blocked: false, remainingMinutes: 0 };
-    }
-
-    const lastTime = getRecordTimeMs(lastRecord);
-
-    if (!lastTime) {
-      return { blocked: false, remainingMinutes: 0 };
-    }
-
-    const elapsedMinutes = (nowMs - lastTime) / (1000 * 60);
-    const remainingMinutes = Math.ceil(25 - elapsedMinutes);
-
-    return {
-      blocked: elapsedMinutes < 25,
-      remainingMinutes: remainingMinutes > 0 ? remainingMinutes : 0,
-    };
-  }, [form.maquina, form.fecha, form.turno, form.operario, records, nowMs]);
+  const hyundaiWaitInfo = {
+  blocked: false,
+  remainingMinutes: 0,
+};
 
   const checks = MACHINES[form.maquina];
 
@@ -1184,18 +1159,7 @@ export default function App() {
   }, [checks, values]);
 
   const controlTurnoOk = form.maquina !== "Torno Hyundai" || values.controlTurno === "OK";
-  const QUALITY_DAILY_CHECK_IDS = ["c280", "c120"];
-
-  const overallOk =
-    validation.every((v) => {
-      if (
-        QUALITY_DAILY_CHECK_IDS.includes(v.id) &&
-        (v.value === "" || v.value === undefined || v.value === null)
-      ) {
-        return true;
-      }
-      return v.ok;
-    }) && controlTurnoOk;
+  const overallOk = validation.every((v) => v.ok) && controlTurnoOk;
 
   const buildSheetId = (data) => {
     if (!data.fecha || !data.turno || !data.maquina) {
@@ -1431,11 +1395,9 @@ ${error?.message || String(error)}`);
       return;
     }
 
-    if (hyundaiWaitInfo.blocked) {
+    if (form.maquina === "Torno Hyundai" && hyundaiWaitInfo.blocked) {
       alert(
-        `No ha transcurrido el tiempo suficiente entre registros.
-
-Deben pasar al menos 25 minutos entre verificaciones del mismo operario y máquina.
+        `No ha transcurrido el tiempo suficiente entre registros. Deben pasar al menos 25 minutos entre verificaciones del Torno Hyundai dentro del mismo turno.
 
 Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
       );
@@ -2038,12 +2000,12 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                 onChange={(event) => setStartupReference(event.target.value)}
               >
                {REFERENCES
-                .filter((reference) => reference.id === "F-1012")
-                .map((reference) => (
-                  <option key={reference.id} value={reference.id}>
-                    {reference.label}
-                  </option>
-                ))}
+  .filter((reference) => reference.id === "F-1012")
+  .map((reference) => (
+    <option key={reference.id} value={reference.id}>
+      {reference.label}
+    </option>
+  ))}
               </select>
             </label>
 
@@ -2075,7 +2037,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
             <Button
               type="button"
               onClick={confirmProductionStart}
-              className="w-full rounded-2xl bg-blue-700 py-5 text-base font-black text-white shadow-lg"
+              className="w-full rounded-2xl bg-[#0f5c63] py-5 text-base font-black text-white shadow-lg"
             >
               Continuar
             </Button>
@@ -2086,14 +2048,26 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
         <aside className="max-h-[calc(100vh-24px)] overflow-y-auto overscroll-contain rounded-3xl border border-slate-200 bg-white p-4 shadow-xl lg:sticky lg:top-6 lg:h-[calc(100vh-48px)] lg:w-72 lg:shrink-0">
           <div className="mb-5 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div
-              style={{
-                background: "linear-gradient(135deg,#0f5c63 0%,#2b8e96 45%,#6cc8d2 100%)",
-                padding: "22px",
-              }}
+             style={{
+  background: "linear-gradient(135deg,#BDECB6 0%,#A8E09F 100%)",
+}}
             >
-              <h1 className="text-4xl font-black tracking-tight text-white">
-                F-1012 · Célula B
-              </h1>
+              <div
+  style={{
+    background: "#BDECB6",
+    padding: "22px",
+    minHeight: "120px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    textAlign: "center",
+  }}
+>
+  <h1 className="text-3xl font-black tracking-tight text-slate-900 leading-tight">
+    F-1012 ·<br />
+    Célula B
+  </h1>
+</div>
             </div>
 
             <div className="p-4">
@@ -2108,7 +2082,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                 Control digital
               </div>
 
-              <p className="mt-4 text-sm font-medium text-slate-600">
+              <p className="mt-4 text-sm font-medium text-[#0F172A]">
                 Control de proceso · Producción
               </p>
             </div>
