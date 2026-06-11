@@ -2150,6 +2150,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
           </nav>
 
           {!isOperatorView && (
+            <>
           <div className="mt-3 rounded-2xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
             <div className="font-bold">Estado actual</div>
             <div className="mt-2 grid gap-1 text-xs">
@@ -2188,6 +2189,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
             </div>
           </div>
 
+            </>
           )}
 
           <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-800">
