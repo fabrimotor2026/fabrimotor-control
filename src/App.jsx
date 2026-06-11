@@ -61,6 +61,19 @@ function getReferenceById(referenceId) {
   return REFERENCES.find((item) => item.id === referenceId) || REFERENCES[0];
 }
 
+const QUALITY_DAILY_CHECK_IDS = ["c280", "c120"];
+
+function isQualityDailyCheckEmptyById(id, value) {
+  return (
+    QUALITY_DAILY_CHECK_IDS.includes(id) &&
+    (value === undefined || value === null || value === "")
+  );
+}
+
+function isQualityDailyValidationEmpty(check) {
+  return isQualityDailyCheckEmptyById(check.id, check.value);
+}
+
 const USERS = [
   {
     "username": "1001",
@@ -1133,6 +1146,15 @@ export default function App() {
       const value = values[item.id];
 
       if (item.type === "number") {
+        if (isQualityDailyCheckEmptyById(item.id, value)) {
+          return {
+            ...item,
+            value,
+            ok: true,
+            pendingQuality: true,
+          };
+        }
+
         const numeric = Number(value);
         const ok = !Number.isNaN(numeric) && numeric >= item.min && numeric <= item.max;
         return {
@@ -1159,7 +1181,7 @@ export default function App() {
   }, [checks, values]);
 
   const controlTurnoOk = form.maquina !== "Torno Hyundai" || values.controlTurno === "OK";
-  const overallOk = validation.every((v) => v.ok) && controlTurnoOk;
+  const overallOk = validation.every((v) => isQualityDailyValidationEmpty(v) || v.ok) && controlTurnoOk;
 
   const buildSheetId = (data) => {
     if (!data.fecha || !data.turno || !data.maquina) {
@@ -1204,11 +1226,11 @@ export default function App() {
     ? currentSheetName
     : availableSheets.find((sheet) => sheet.id === selectedSheetId)?.name || "";
 
-  const filteredRecords = records.filter((record) => {
-    const matchCurrentOperator =
-      !isVerificationUser(currentUser) ||
-      String(record.operario || "").startsWith(String(currentUser?.username || ""));
+  const isOwnRecordForCurrentUser = (record) =>
+    !isVerificationUser(currentUser) ||
+    String(record.operario || "").startsWith(String(currentUser?.username || ""));
 
+  const filteredRecords = records.filter((record) => {
     const matchDate = !filterDate || record.fecha === filterDate;
     const matchTurno = !filterTurno || record.turno === filterTurno;
     const matchOperario =
@@ -1226,7 +1248,6 @@ export default function App() {
     const matchSheet = !activeSheetId || recordSheetId === activeSheetId;
 
     return (
-      matchCurrentOperator &&
       matchDate &&
       matchTurno &&
       matchOperario &&
@@ -1236,7 +1257,7 @@ export default function App() {
     );
   });
 
-  const rejectedRecords = records.filter((record) => record.resultado === "NO OK");
+  const rejectedRecords = records.filter((record) => isOwnRecordForCurrentUser(record) && record.resultado === "NO OK");
 
 
   const getRejectedChecks = (record) => {
@@ -1556,6 +1577,10 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
     const checksOk = machineChecks.every((check) => {
       const value = measurementValues?.[check.id];
 
+      if (isQualityDailyCheckEmptyById(check.id, value)) {
+        return true;
+      }
+
       if (check.type === "number") {
         const numeric = Number(value);
         return !Number.isNaN(numeric) && numeric >= check.min && numeric <= check.max;
@@ -1787,8 +1812,6 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
   if (!currentUser) {
     return <LoginScreen onLogin={handleLogin} users={appUsers} />;
   }
-
-  const isOperatorView = isVerificationUser(currentUser);
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900">
@@ -2071,7 +2094,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
   }}
 >
   <h1 className="text-3xl font-black tracking-tight text-slate-900 leading-tight">
-    F-1012<br />
+    F-1012 ·<br />
     Célula B
   </h1>
 </div>
@@ -2096,50 +2119,11 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
           </div>
 
           <nav className="space-y-1.5">
-            <SidebarButton
-              active={activeView === "nueva"}
-              onClick={() => setActiveView("nueva")}
-              icon={<ClipboardCheck className="h-4 w-4" />}
-              label="Nueva verificación"
-            />
-
-            {isOperatorView ? (
-              <SidebarButton
-                active={activeView === "historico"}
-                onClick={() => setActiveView("historico")}
-                icon={<FileText className="h-4 w-4" />}
-                label="Mi historial"
-                badge={filteredRecords.length}
-              />
-            ) : (
-              <>
-                <SidebarButton
-                  active={activeView === "historico"}
-                  onClick={() => setActiveView("historico")}
-                  icon={<FileText className="h-4 w-4" />}
-                  label="Histórico"
-                  badge={filteredRecords.length}
-                />
-                <SidebarButton
-                  onClick={() => setShowRejectsModal(true)}
-                  icon={<AlertTriangle className="h-4 w-4" />}
-                  label="Rechazos"
-                  badge={rejectedRecords.length}
-                  danger
-                />
-                <SidebarButton
-                  onClick={() => setShowPdfModal(true)}
-                  icon={<Printer className="h-4 w-4" />}
-                  label="PDF registros"
-                />
-                <SidebarButton
-                  onClick={() => setShowCpkModal(true)}
-                  icon={<TrendingUp className="h-4 w-4" />}
-                  label="Gráfico CPK 30/40"
-                />
-              </>
-            )}
-
+            <SidebarButton active={activeView === "nueva"} onClick={() => setActiveView("nueva")} icon={<ClipboardCheck className="h-4 w-4" />} label="Nueva verificación" />
+            <SidebarButton active={activeView === "historico"} onClick={() => setActiveView("historico")} icon={<FileText className="h-4 w-4" />} label="Histórico" badge={filteredRecords.length} />
+            <SidebarButton onClick={() => setShowRejectsModal(true)} icon={<AlertTriangle className="h-4 w-4" />} label="Rechazos" badge={rejectedRecords.length} danger />
+            <SidebarButton onClick={() => setShowPdfModal(true)} icon={<Printer className="h-4 w-4" />} label="PDF registros" />
+            <SidebarButton onClick={() => setShowCpkModal(true)} icon={<TrendingUp className="h-4 w-4" />} label="Gráfico CPK 30/40" />
             {isAdminUser(currentUser) && (
               <SidebarButton
                 onClick={() => setShowAdminPanel(true)}
@@ -2149,8 +2133,6 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
             )}
           </nav>
 
-          {!isOperatorView && (
-            <>
           <div className="mt-3 rounded-2xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
             <div className="font-bold">Estado actual</div>
             <div className="mt-2 grid gap-1 text-xs">
@@ -2189,9 +2171,6 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
             </div>
           </div>
 
-            </>
-          )}
-
           <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-800">
             <div className="text-xs font-black uppercase tracking-wide text-slate-500">Usuario conectado</div>
             <div className="mt-2 font-black text-slate-900">{currentUser.name}</div>
@@ -2206,12 +2185,10 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
             </Button>
           </div>
 
-          {!isOperatorView && (
-            <Button onClick={exportExcel} className="mt-3 w-full rounded-2xl bg-[#1f6f73] text-white shadow-sm">
-              <Download className="mr-2 h-4 w-4" />
-              Exportar Excel
-            </Button>
-          )}
+          <Button onClick={exportExcel} className="mt-3 w-full rounded-2xl bg-[#1f6f73] text-white shadow-sm">
+            <Download className="mr-2 h-4 w-4" />
+            Exportar Excel
+          </Button>
         </aside>
 
         <main className="flex-1 space-y-6">
@@ -2488,6 +2465,12 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                               </div>
                             )}
 
+                            {QUALITY_DAILY_CHECK_IDS.includes(item.id) && (
+                              <div className="rounded-xl bg-amber-50 p-2 font-bold text-amber-800">
+                                Control diario de Calidad. No obligatorio para el operario.
+                              </div>
+                            )}
+
                             {item.comentario && (
                               <div className="rounded-xl bg-slate-100 p-2 text-slate-700">
                                 {item.comentario}
@@ -2505,7 +2488,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                               : "bg-red-100 text-red-700"
                           }`}
                         >
-                          {item.ok ? "OK" : "NO OK"}
+                          {item.pendingQuality ? "Pendiente Calidad" : item.ok ? "OK" : "NO OK"}
                         </div>
                       )}
                     </div>
@@ -2624,7 +2607,6 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
             </CardContent>
           </Card>
 
-          {!isOperatorView && (
           <Card className="rounded-3xl border-0 shadow-lg">
             <CardContent className="space-y-5 p-6">
               <div className="flex items-start justify-between gap-4">
@@ -2686,7 +2668,6 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
               </div>
             </CardContent>
           </Card>
-          )}
           </>
 
           )}
@@ -2696,7 +2677,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
             <CardContent className="p-6">
               <div className="mb-5 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <h2 className="text-xl font-semibold">{isOperatorView ? "Mi historial" : "Histórico"}</h2>
+                  <h2 className="text-xl font-semibold">Histórico</h2>
 
                   <Button
                     size="sm"
