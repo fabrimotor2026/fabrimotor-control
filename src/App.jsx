@@ -61,6 +61,19 @@ function getReferenceById(referenceId) {
   return REFERENCES.find((item) => item.id === referenceId) || REFERENCES[0];
 }
 
+const QUALITY_DAILY_CHECK_IDS = ["c280", "c120"];
+
+function isQualityDailyCheckEmptyById(id, value) {
+  return (
+    QUALITY_DAILY_CHECK_IDS.includes(id) &&
+    (value === undefined || value === null || value === "")
+  );
+}
+
+function isQualityDailyValidationEmpty(check) {
+  return isQualityDailyCheckEmptyById(check.id, check.value);
+}
+
 const USERS = [
   {
     "username": "1001",
@@ -1133,6 +1146,15 @@ export default function App() {
       const value = values[item.id];
 
       if (item.type === "number") {
+        if (isQualityDailyCheckEmptyById(item.id, value)) {
+          return {
+            ...item,
+            value,
+            ok: true,
+            pendingQuality: true,
+          };
+        }
+
         const numeric = Number(value);
         const ok = !Number.isNaN(numeric) && numeric >= item.min && numeric <= item.max;
         return {
@@ -1159,7 +1181,7 @@ export default function App() {
   }, [checks, values]);
 
   const controlTurnoOk = form.maquina !== "Torno Hyundai" || values.controlTurno === "OK";
-  const overallOk = validation.every((v) => v.ok) && controlTurnoOk;
+  const overallOk = validation.every((v) => isQualityDailyValidationEmpty(v) || v.ok) && controlTurnoOk;
 
   const buildSheetId = (data) => {
     if (!data.fecha || !data.turno || !data.maquina) {
@@ -1550,6 +1572,10 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
 
     const checksOk = machineChecks.every((check) => {
       const value = measurementValues?.[check.id];
+
+      if (isQualityDailyCheckEmptyById(check.id, value)) {
+        return true;
+      }
 
       if (check.type === "number") {
         const numeric = Number(value);
@@ -2435,6 +2461,12 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                               </div>
                             )}
 
+                            {QUALITY_DAILY_CHECK_IDS.includes(item.id) && (
+                              <div className="rounded-xl bg-amber-50 p-2 font-bold text-amber-800">
+                                Control diario de Calidad. No obligatorio para el operario.
+                              </div>
+                            )}
+
                             {item.comentario && (
                               <div className="rounded-xl bg-slate-100 p-2 text-slate-700">
                                 {item.comentario}
@@ -2452,7 +2484,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                               : "bg-red-100 text-red-700"
                           }`}
                         >
-                          {item.ok ? "OK" : "NO OK"}
+                          {item.pendingQuality ? "Pendiente Calidad" : item.ok ? "OK" : "NO OK"}
                         </div>
                       )}
                     </div>
