@@ -461,7 +461,7 @@ const MACHINES = {
         "Calibre PNP [CA237]",
       type: "oknok",
       frecuencia:
-        "Registrar la primera pieza del turno y después las piezas nº 16, 32, 48, 64, 80, 96 y 112.",
+        "Registrar la pieza número 1, 16, 32, 48, 64, 80, 96 y 112.",
     },
     {
       id: "c330",
@@ -470,7 +470,7 @@ const MACHINES = {
         "Calibre PNP [CA236]",
       type: "oknok",
       frecuencia:
-        "Registrar la primera pieza del turno y después las piezas nº 16, 32, 48, 64, 80, 96 y 112.",
+        "Registrar la pieza número 1, 16, 32, 48, 64, 80, 96 y 112.",
     },
     {
       id: "c360",
@@ -479,7 +479,7 @@ const MACHINES = {
         "Galga [CA238] [CA240]",
       type: "oknok",
       frecuencia:
-        "Registrar la primera pieza del turno y después las piezas nº 16, 32, 48, 64, 80, 96 y 112.",
+        "Registrar la pieza número 1, 16, 32, 48, 64, 80, 96 y 112.",
     },
     {
       id: "c60neway",
@@ -488,7 +488,7 @@ const MACHINES = {
         "Anillo comprobación [PT087]",
       type: "oknok",
       frecuencia:
-        "Registrar la primera pieza del turno y después las piezas nº 16, 32, 48, 64, 80, 96 y 112.",
+        "Registrar la pieza número 1, 16, 32, 48, 64, 80, 96 y 112.",
     },
     
     {
