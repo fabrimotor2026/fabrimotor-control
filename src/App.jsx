@@ -61,8 +61,12 @@ function getReferenceById(referenceId) {
   return REFERENCES.find((item) => item.id === referenceId) || REFERENCES[0];
 }
 
-function comparatorOptions(min = 20, max = 80) {
+function comparatorPositiveOptions(min = 20, max = 80) {
   return Array.from({ length: max - min + 1 }, (_, index) => min + index);
+}
+
+function comparatorSignedOptions(start = 20, end = -80) {
+  return Array.from({ length: start - end + 1 }, (_, index) => start - index);
 }
 
 function rangeOptions(min, max, step = 0.01) {
@@ -255,7 +259,7 @@ const MACHINES = {
       min: 38,
       max: 63,
       type: "number",
-      inputMode: "selectComparator",
+      inputMode: "selectComparatorPositive",
       selectMin: 20,
       selectMax: 80,
       frecuencia:
@@ -272,7 +276,7 @@ const MACHINES = {
       min: 38,
       max: 63,
       type: "number",
-      inputMode: "selectComparator",
+      inputMode: "selectComparatorPositive",
       selectMin: 20,
       selectMax: 80,
       frecuencia:
@@ -290,9 +294,9 @@ const MACHINES = {
       displayMin: "-2",
       displayMax: "-52",
       type: "number",
-      inputMode: "selectComparatorNegative",
-      selectMin: 80,
-      selectMax: 20,
+      inputMode: "selectComparatorSigned",
+      selectStart: 20,
+      selectEnd: -80,
       frecuencia:
         "Registrar las piezas número 1, 16, 32, 48, 64, 80, 96 y 112.",
     },
@@ -2583,7 +2587,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                     </div>
 
                     {item.type === "number" ? (
-                      item.inputMode === "selectComparator" ? (
+                      item.inputMode === "selectComparatorPositive" ? (
                         <select
                           className="input text-slate-900 font-bold"
                           value={values[item.id] || ""}
@@ -2595,13 +2599,13 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                           }
                         >
                           <option value="">Seleccionar lectura</option>
-                          {Array.from({ length: 101 }, (_, i) => 20 - i).map((reading) => (
+                          {comparatorPositiveOptions(item.selectMin || 20, item.selectMax || 80).map((reading) => (
                             <option key={reading} value={reading}>
                               +{reading}
                             </option>
                           ))}
                         </select>
-                      ) : item.inputMode === "selectComparatorNegative" ? (
+                      ) : item.inputMode === "selectComparatorSigned" ? (
                         <select
                           className="input text-slate-900 font-bold"
                           value={values[item.id] || ""}
@@ -2613,9 +2617,9 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                           }
                         >
                           <option value="">Seleccionar lectura</option>
-                          {comparatorOptions(item.selectMin || 20, item.selectMax || 80).map((reading) => (
+                          {comparatorSignedOptions(item.selectStart || 20, item.selectEnd || -80).map((reading) => (
                             <option key={reading} value={reading}>
-                              `+${reading}`
+                              {reading > 0 ? `+${reading}` : reading}
                             </option>
                           ))}
                         </select>
