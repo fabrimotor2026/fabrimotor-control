@@ -326,6 +326,8 @@ const MACHINES = {
       min: 14.8,
       max: 15.2,
       type: "number",
+      inputMode: "selectFixed",
+      fixedOptions: ["14.70","14.80","14.90","15.00","15.10","15.20","15.30"],
       frecuencia:
         "Registrar la primera pieza del turno y después las piezas nº 16, 32, 48, 64, 80, 96 y 112.",
     },
@@ -346,6 +348,10 @@ const MACHINES = {
       min: 101.9,
       max: 102.1,
       type: "number",
+      inputMode: "selectRange",
+      rangeMin: 101.80,
+      rangeMax: 102.20,
+      rangeStep: 0.01,
       frecuencia:
         "Registrar la primera pieza del turno y después las piezas nº 16, 32, 48, 64, 80, 96 y 112.",
     },
@@ -357,6 +363,10 @@ const MACHINES = {
       min: 68.7,
       max: 69.3,
       type: "number",
+      inputMode: "selectRange",
+      rangeMin: 68.60,
+      rangeMax: 69.40,
+      rangeStep: 0.01,
       frecuencia:
         "Registrar únicamente la primera pieza del turno.",
     },
@@ -368,6 +378,10 @@ const MACHINES = {
       min: 81.1,
       max: 81.7,
       type: "number",
+      inputMode: "selectRange",
+      rangeMin: 81.00,
+      rangeMax: 81.80,
+      rangeStep: 0.01,
       frecuencia:
         "Registrar únicamente la primera pieza del turno.",
     },
@@ -379,6 +393,10 @@ const MACHINES = {
       min: 124.9,
       max: 125.1,
       type: "number",
+      inputMode: "selectRange",
+      rangeMin: 124.80,
+      rangeMax: 125.20,
+      rangeStep: 0.01,
       frecuencia:
         "Registrar únicamente la primera pieza del turno.",
     },
