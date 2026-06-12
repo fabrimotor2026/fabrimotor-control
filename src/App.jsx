@@ -2545,21 +2545,15 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                          )}
 
                             {item.frecuencia && (
-                              <div className="rounded-2xl border border-blue-200 bg-blue-50 p-3 text-base font-bold leading-relaxed text-blue-900">
-                                <div className="mb-1 text-xs font-black uppercase tracking-wide text-blue-700">
-                                  Frecuencia de control
-                                </div>
-                                <div>{item.frecuencia}</div>
-                              </div>
-                            )}
-
-                            {item.comentario && (
-                              <div className="rounded-xl bg-slate-100 p-2 text-slate-700">
-                                {item.comentario}
-                              </div>
-                            )}
-                          </div>
-                        )}
+  <div className="space-y-1 text-xs text-slate-500">
+    <div className="rounded-2xl border border-blue-200 bg-blue-50 p-3 text-base font-bold leading-relaxed text-blue-900">
+      <div className="mb-1 text-xs font-black uppercase tracking-wide text-blue-700">
+        Frecuencia de control
+      </div>
+      <div>{item.frecuencia}</div>
+    </div>
+  </div>
+)}
                       </div>
 
                       {item.value !== undefined && item.value !== "" && (
