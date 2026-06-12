@@ -64,7 +64,19 @@ function getReferenceById(referenceId) {
 function comparatorOptions(min = 20, max = 80) {
   return Array.from({ length: max - min + 1 }, (_, index) => min + index);
 }
+function rangeOptions(min, max, step = 0.01) {
+  const values = [];
 
+  for (
+    let value = min;
+    value <= max + 0.000001;
+    value += step
+  ) {
+    values.push(Number(value.toFixed(2)));
+  }
+
+  return values;
+}
 const USERS = [
   {
     "username": "1001",
