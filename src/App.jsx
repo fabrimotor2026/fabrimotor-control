@@ -883,7 +883,19 @@ function LoginScreen({ onLogin, users = getStoredUsers() }) {
     </div>
   );
 }
+const QUALITY_DAILY_CHECK_IDS = ["c280", "c120"];
 
+function isEmptyValue(value) {
+  return value === undefined || value === null || value === "";
+}
+
+function isQualityDailyCheckEmptyById(id, value) {
+  return QUALITY_DAILY_CHECK_IDS.includes(id) && isEmptyValue(value);
+}
+
+function isQualityDailyValidationEmpty(check) {
+  return isQualityDailyCheckEmptyById(check.id, check.value);
+}
 export default function App() {
   const [form, setForm] = useState(initialForm());
   const [values, setValues] = useState({});
@@ -1765,19 +1777,6 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
       return;
     }
 
-const QUALITY_DAILY_CHECK_IDS = ["c280", "c120"];
-
-function isEmptyValue(value) {
-  return value === undefined || value === null || value === "";
-}
-
-function isQualityDailyCheckEmptyById(id, value) {
-  return QUALITY_DAILY_CHECK_IDS.includes(id) && isEmptyValue(value);
-}
-
-function isQualityDailyValidationEmpty(check) {
-  return isQualityDailyCheckEmptyById(check.id, check.value);
-}
     localStorage.setItem("startupReference", selectedReferenceData.id);
     localStorage.setItem("startupPiece", piece);
     localStorage.setItem("startupOF", of);
