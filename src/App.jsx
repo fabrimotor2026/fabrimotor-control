@@ -1764,6 +1764,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
       alert("Debe introducir el número de pieza.");
       return;
     }
+
 const QUALITY_DAILY_CHECK_IDS = ["c280", "c120"];
 
 function isEmptyValue(value) {
