@@ -2669,7 +2669,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                       )
                     ) : (
                       <select
-                        className="input"
+                        className="input text-slate-900 font-bold"
                                 value={values[item.id] || ""}
                         onChange={(e) =>
                           setValues({
@@ -2678,7 +2678,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                           })
                         }
                       >
-                        <option value="">Seleccionar</option>
+                        <option value="">Seleccionar lectura</option>
                         <option value="OK">OK</option>
                         <option value="NO OK">NO OK</option>
                       </select>
@@ -4367,13 +4367,13 @@ function EditRecordModal({
             {editForm.maquina === "Torno Hyundai" && (
               <Field label="Control Ecoroll / Refrigerante">
                 <select
-                  className="input"
+                  className="input text-slate-900 font-bold"
                   value={editValues.controlTurno || ""}
                   onChange={(e) =>
                     setEditValues({ ...editValues, controlTurno: e.target.value })
                   }
                 >
-                  <option value="">Seleccionar</option>
+                  <option value="">Seleccionar lectura</option>
                   <option value="OK">OK</option>
                   <option value="NO OK">NO OK</option>
                 </select>
@@ -4413,13 +4413,13 @@ function EditRecordModal({
                     />
                   ) : (
                     <select
-                      className="input"
+                      className="input text-slate-900 font-bold"
                       value={value}
                       onChange={(e) =>
                         setEditValues({ ...editValues, [check.id]: e.target.value })
                       }
                     >
-                      <option value="">Seleccionar</option>
+                      <option value="">Seleccionar lectura</option>
                       <option value="OK">OK</option>
                       <option value="NO OK">NO OK</option>
                     </select>
