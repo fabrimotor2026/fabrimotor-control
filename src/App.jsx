@@ -2244,7 +2244,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                   </Button>
                 </div>
                 <h2 className="mt-3 text-3xl font-black tracking-tight text-slate-900">
-                  {activeView === "nueva" ? "F-1012 · Control de proceso" : "F-1012 · Histórico y calidad"}
+                  {activeView === "nueva" ? "Control de proceso" : "F-1012 · Histórico y calidad"}
                 </h2>
               </div>
 
@@ -2348,18 +2348,6 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                     readOnly
                   />
                 </Field>
-              </div>
-
-              <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
-                <div className="font-bold">Hoja de verificación actual</div>
-                <div className="mt-1">
-                  {currentSheetId
-                    ? currentSheetName
-                    : "Selecciona fecha, turno y máquina para crear/acceder a la hoja de verificación."}
-                </div>
-                <div className="mt-2 text-xs">
-                  Cada fecha, turno y máquina generan una hoja independiente.
-                </div>
               </div>
 
               {form.maquina === "Torno Hyundai" && (
