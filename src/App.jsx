@@ -1837,6 +1837,529 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
             </div>
 
             <div className="grid gap-5 overflow-auto p-6 lg:grid-cols-[360px_1fr]">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <h3 className="mb-4 text-lg font-black text-slate-900">
+                  Usuario
+                </h3>
+
+                <div className="grid gap-3">
+                  <Field label="Nº operario">
+                    <input
+                      className="input"
+                      value={adminUserForm.username}
+                      onChange={(event) =>
+                        setAdminUserForm({ ...adminUserForm, username: event.target.value })
+                      }
+                      placeholder="Ejemplo: 2131"
+                    />
+                  </Field>
+
+                  <Field label="Nombre">
+                    <input
+                      className="input"
+                      value={adminUserForm.name}
+                      onChange={(event) =>
+                        setAdminUserForm({ ...adminUserForm, name: event.target.value })
+                      }
+                      placeholder="Nombre y apellidos"
+                    />
+                  </Field>
+
+                  <Field label="Contraseña">
+                    <input
+                      className="input"
+                      value={adminUserForm.password}
+                      onChange={(event) =>
+                        setAdminUserForm({ ...adminUserForm, password: event.target.value })
+                      }
+                      placeholder="Contraseña"
+                    />
+                  </Field>
+
+                  <Field label="Rol">
+                    <select
+                      className="input"
+                      value={adminUserForm.role}
+                      onChange={(event) =>
+                        setAdminUserForm({ ...adminUserForm, role: event.target.value })
+                      }
+                    >
+                      {USER_ROLES.map((role) => (
+                        <option key={role} value={role}>
+                          {role}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+
+                  <Button
+                    type="button"
+                    onClick={saveAdminUser}
+                    className="rounded-2xl bg-[#1f6f73] text-white font-bold hover:bg-[#18595d]"
+                  >
+                    Guardar usuario
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={resetAdminUserForm}
+                    className="rounded-2xl"
+                  >
+                    Nuevo / limpiar
+                  </Button>
+                </div>
+              </div>
+
+              <div className="min-w-0">
+                <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h3 className="text-lg font-black text-slate-900">
+                      Usuarios registrados
+                    </h3>
+                    <p className="text-sm text-slate-500">
+                      {adminFilteredUsers.length} de {appUsers.length} usuarios.
+                    </p>
+                  </div>
+
+                  <input
+                    className="input sm:max-w-xs"
+                    value={adminSearch}
+                    onChange={(event) => setAdminSearch(event.target.value)}
+                    placeholder="Buscar por nº, nombre o rol"
+                  />
+                </div>
+
+                <div className="overflow-auto rounded-2xl border border-slate-200">
+                  <table className="w-full min-w-[820px] text-sm">
+                    <thead className="bg-slate-100 text-slate-700">
+                      <tr>
+                        <th className="px-3 py-2 text-left">Nº</th>
+                        <th className="px-3 py-2 text-left">Nombre</th>
+                        <th className="px-3 py-2 text-left">Rol</th>
+                        <th className="px-3 py-2 text-left">Contraseña</th>
+                        <th className="px-3 py-2 text-right">Acciones</th>
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {adminFilteredUsers.map((user) => (
+                        <tr key={user.username} className="border-t border-slate-200">
+                          <td className="px-3 py-2 font-bold">{user.username}</td>
+                          <td className="px-3 py-2">{user.name}</td>
+                          <td className="px-3 py-2">{user.role}</td>
+                          <td className="px-3 py-2">{user.password || user.pin || ""}</td>
+                          <td className="px-3 py-2 text-right">
+                            <button
+                              type="button"
+                              onClick={() => editAdminUser(user)}
+                              className="mr-2 rounded-xl border border-slate-300 bg-white px-3 py-1 font-bold text-slate-700 hover:bg-slate-100"
+                            >
+                              Editar
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => deleteAdminUser(user.username)}
+                              disabled={user.username === currentUser?.username}
+                              className="rounded-xl border border-red-200 bg-red-50 px-3 py-1 font-bold text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                              Eliminar
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+                  Los cambios se guardan localmente y se sincronizan con Supabase cuando hay conexión.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {showProductionStart && isVerificationUser(currentUser) && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "rgba(15, 23, 42, 0.65)",
+            padding: "20px",
+          }}
+        >
+          <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
+            <div className="mb-5">
+              <div className="inline-flex rounded-full bg-[#e6f4f4] px-3 py-1 text-xs font-black uppercase tracking-wide text-[#1f6f73] ring-1 ring-[#b8dada]">
+                Inicio de producción
+              </div>
+              <h2 className="mt-3 text-2xl font-black text-slate-900">
+                Introduce la pieza a registrar
+              </h2>
+              <p className="mt-1 text-sm text-slate-600">
+                Estos datos se cargarán automáticamente en la verificación.
+              </p>
+            </div>
+
+            <label className="mb-3 block">
+              <span className="mb-1.5 block text-sm font-bold text-slate-700">
+                Referencia
+              </span>
+              <select
+                className="input"
+                value={startupReference}
+                onChange={(event) => setStartupReference(event.target.value)}
+              >
+               {REFERENCES
+  .filter((reference) => reference.id === "F-1012")
+  .map((reference) => (
+    <option key={reference.id} value={reference.id}>
+      {reference.label}
+    </option>
+  ))}
+              </select>
+            </label>
+
+            <label className="mb-3 block">
+              <span className="mb-1.5 block text-sm font-bold text-slate-700">
+                Número de pieza
+              </span>
+              <input
+                autoFocus
+                className="input"
+                value={startupPiece}
+                onChange={(event) => setStartupPiece(event.target.value)}
+                placeholder="Ejemplo: 123456"
+              />
+            </label>
+
+            <label className="mb-5 block">
+              <span className="mb-1.5 block text-sm font-bold text-slate-700">
+                Orden de fabricación
+              </span>
+              <input
+                className="input"
+                value={startupOF}
+                onChange={(event) => setStartupOF(event.target.value)}
+                placeholder="Opcional"
+              />
+            </label>
+
+            <Button
+              type="button"
+              onClick={confirmProductionStart}
+              className="w-full rounded-2xl bg-[#0f5c63] py-5 text-base font-black text-white shadow-lg"
+            >
+              Continuar
+            </Button>
+          </div>
+        </div>
+      )}
+      <div className="mx-auto flex min-h-screen max-w-[1600px] flex-col gap-4 p-4 lg:flex-row lg:p-6">
+        <aside className="max-h-[calc(100vh-24px)] overflow-y-auto overscroll-contain rounded-3xl border border-slate-200 bg-white p-4 shadow-xl lg:sticky lg:top-6 lg:h-[calc(100vh-48px)] lg:w-72 lg:shrink-0">
+          <div className="mb-5 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div
+             style={{
+  background: "linear-gradient(135deg,#BDECB6 0%,#A8E09F 100%)",
+}}
+            >
+              <div
+  style={{
+    background: "#BDECB6",
+    padding: "22px",
+    minHeight: "120px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    textAlign: "center",
+  }}
+>
+  <h1 className="text-3xl font-black tracking-tight text-slate-900 leading-tight">
+    F-1012<br />
+    Célula B
+  </h1>
+</div>
+            </div>
+
+            <div className="p-4">
+              <img
+                src="/logo-fabrimotor.png"
+                alt="FabriMotor"
+                className="mb-5 h-16 w-auto object-contain"
+              />
+
+              <div className="inline-flex items-center gap-2 rounded-full bg-[#e6f4f4] px-3 py-1 text-xs font-bold uppercase tracking-wide text-[#1f6f73] ring-1 ring-[#b8dada]">
+                <ClipboardCheck className="h-4 w-4" />
+                Control digital
+              </div>
+            </div>
+          </div>
+
+          <nav className="space-y-1.5">
+            <SidebarButton
+              active={activeView === "nueva"}
+              onClick={() => setActiveView("nueva")}
+              icon={<ClipboardCheck className="h-4 w-4" />}
+              label="Nueva verificación"
+            />
+
+            {isOperatorView ? (
+              <SidebarButton
+                active={activeView === "historico"}
+                onClick={() => setActiveView("historico")}
+                icon={<FileText className="h-4 w-4" />}
+                label="Mi historial"
+                badge={filteredRecords.length}
+              />
+            ) : (
+              <>
+                <SidebarButton
+                  active={activeView === "historico"}
+                  onClick={() => setActiveView("historico")}
+                  icon={<FileText className="h-4 w-4" />}
+                  label="Histórico"
+                  badge={filteredRecords.length}
+                />
+                <SidebarButton
+                  onClick={() => setShowRejectsModal(true)}
+                  icon={<AlertTriangle className="h-4 w-4" />}
+                  label="Rechazos"
+                  badge={rejectedRecords.length}
+                  danger
+                />
+                <SidebarButton
+                  onClick={() => setShowPdfModal(true)}
+                  icon={<Printer className="h-4 w-4" />}
+                  label="PDF registros"
+                />
+                <SidebarButton
+                  onClick={() => setShowCpkModal(true)}
+                  icon={<TrendingUp className="h-4 w-4" />}
+                  label="Gráfico CPK 30/40"
+                />
+              </>
+            )}
+
+            {isAdminUser(currentUser) && (
+              <SidebarButton
+                onClick={() => setShowAdminPanel(true)}
+                icon={<Users className="h-4 w-4" />}
+                label="Panel Administrador"
+              />
+            )}
+          </nav>
+
+          {!isOperatorView && (
+            <>
+          <div className="mt-3 rounded-2xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
+            <div className="font-bold">Estado actual</div>
+            <div className="mt-2 grid gap-1 text-xs">
+              <span>Máquina: <strong>{form.maquina}</strong></span>
+              <span>Turno: <strong>{turnoLabel(form.turno)}</strong></span>
+              <span>Fecha: <strong>{form.fecha}</strong></span>
+              <span>Registros: <strong>{records.length}</strong></span>
+            </div>
+          </div>
+
+          <div className="mt-3 rounded-2xl border border-purple-200 bg-purple-50 p-3 text-sm text-purple-900">
+            <div className="font-bold">Base de datos</div>
+            <div className="mt-2 grid gap-1 text-xs">
+              <span>Registros: <strong>{databaseMode}</strong></span>
+              <span>Última sinc. registros: <strong>{lastSyncAt || "-"}</strong></span>
+              <span>Usuarios: <strong>{usersMode}</strong></span>
+              <span>Última sinc. usuarios: <strong>{lastUsersSyncAt || "-"}</strong></span>
+            </div>
+            <div className="mt-3 grid gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={refreshSharedRecords}
+                className="w-full rounded-2xl border-purple-300 bg-white text-purple-900 hover:bg-purple-100"
+              >
+                Actualizar registros
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={refreshSharedUsers}
+                className="w-full rounded-2xl border-purple-300 bg-white text-purple-900 hover:bg-purple-100"
+              >
+                Actualizar usuarios
+              </Button>
+            </div>
+          </div>
+
+            </>
+          )}
+
+          <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-800">
+            <div className="text-xs font-black uppercase tracking-wide text-slate-500">Usuario conectado</div>
+            <div className="mt-2 font-black text-slate-900">{currentUser.name}</div>
+            <div className="text-xs text-slate-600">Rol: {roleLabel(currentUser.role)}</div>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleLogout}
+              className="mt-3 w-full rounded-2xl border-slate-300 bg-white text-slate-800 hover:bg-slate-100"
+            >
+              Cerrar sesión
+            </Button>
+          </div>
+
+          {!isOperatorView && (
+            <Button onClick={exportExcel} className="mt-3 w-full rounded-2xl bg-[#1f6f73] text-white shadow-sm">
+              <Download className="mr-2 h-4 w-4" />
+              Exportar Excel
+            </Button>
+          )}
+        </aside>
+
+        <main className="flex-1 space-y-6">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-3xl border border-slate-200 bg-white p-5 shadow-lg"
+          >
+            <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="inline-flex items-center gap-2 rounded-full bg-[#e6f4f4] px-4 py-2 text-sm font-bold text-[#1f6f73] ring-1 ring-[#b8dada]">
+                    FABRIMOTOR · {activeView === "nueva" ? "Nueva verificación" : "Histórico de registros"}
+                  </div>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleLogout}
+                    className="rounded-2xl border-slate-300 bg-white text-xs font-bold text-slate-800 hover:bg-slate-100"
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Salir
+                  </Button>
+                </div>
+                <h2 className="mt-3 text-3xl font-black tracking-tight text-slate-900">
+                  {activeView === "nueva" ? "F-1012 · Control de proceso" : "F-1012 · Histórico y calidad"}
+                </h2>
+              </div>
+
+              
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <StatusPill label="Resultado" value={overallOk ? "OK" : "Revisar"} ok={overallOk} />
+                <StatusPill label="Registros" value={String(currentDateRecords.length)} />
+                <StatusPill label="Rechazos" value={String(currentDateNok)} ok={currentDateNok === 0} />
+                <StatusPill label="Última verif." value={lastVerificationElapsedLabel} />
+              </div>
+            </div>
+          </motion.div>
+
+          <div className={activeView === "nueva" ? "grid gap-6 xl:grid-cols-[460px_1fr]" : "grid gap-6"}>
+          {activeView === "nueva" && (
+          <>
+          <Card className="rounded-3xl border-0 shadow-lg">
+            <CardContent className="space-y-5 p-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold">Nueva verificación</h2>
+
+                {overallOk ? (
+                  <div className="flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-sm text-emerald-700">
+                    <CheckCircle2 className="h-4 w-4" /> OK
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1 rounded-full bg-red-100 px-3 py-1 text-sm text-red-700">
+                    <AlertTriangle className="h-4 w-4" /> Revisar
+                  </div>
+                )}
+              </div>
+
+              {hyundaiWaitInfo.blocked && (
+                <div className="rounded-2xl border border-red-300 bg-red-50 p-4 text-sm font-semibold text-red-700">
+                  No ha transcurrido el tiempo suficiente entre registros del Torno Hyundai.
+                  Deben pasar al menos 25 minutos entre verificaciones del mismo turno.
+                  Tiempo restante aproximado: {hyundaiWaitInfo.remainingMinutes} minutos.
+                </div>
+              )}
+
+              <div className="grid gap-4">
+                <Field label="Máquina">
+                  <select
+                    value={form.maquina}
+                    onChange={(e) => {
+                      setForm({ ...form, maquina: e.target.value });
+                      setValues({});
+                    }}
+                    className="input"
+                  >
+                    {Object.keys(MACHINES).map((m) => (
+                      <option key={m}>{m}</option>
+                    ))}
+                  </select>
+                </Field>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Fecha">
+                    <input
+                      type="date"
+                      className="input"
+                      value={form.fecha}
+                      onChange={(e) => setForm({ ...form, fecha: e.target.value })}
+                    />
+                  </Field>
+
+                  <Field label="Turno">
+                    <select
+                      className="input"
+                      value={form.turno}
+                      onChange={(e) => setForm({ ...form, turno: e.target.value })}
+                    >
+                      <option>M</option>
+                      <option>T</option>
+                      <option>N</option>
+                    </select>
+                  </Field>
+                </div>
+
+                <Field label="Referencia">
+                  <input
+                    className="input bg-slate-100 font-semibold text-slate-700"
+                    value={form.referenciaNombre || getReferenceById(form.referencia).label}
+                    readOnly
+                  />
+                </Field>
+
+                <Field label="Operario">
+                  <input
+                    className="input bg-slate-100 font-semibold text-slate-700"
+                    value={form.operario}
+                    placeholder={currentUser ? `${currentUser.username} - ${currentUser.name.trim()}` : "Operario"}
+                    readOnly
+                  />
+                </Field>
+
+                <Field label="Número de pieza">
+                  <input
+                    className="input bg-slate-100 font-semibold text-slate-700"
+                    value={form.numeroPieza}
+                    readOnly
+                  />
+                </Field>
+              </div>
+
+              <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
+                <div className="font-bold">Hoja de verificación actual</div>
+                <div className="mt-1">
+                  {currentSheetId
+                    ? currentSheetName
+                    : "Selecciona fecha, turno y máquina para crear/acceder a la hoja de verificación."}
+                </div>
+                <div className="mt-2 text-xs">
+                  Cada fecha, turno y máquina generan una hoja independiente.
+                </div>
               </div>
 
               {form.maquina === "Torno Hyundai" && (
