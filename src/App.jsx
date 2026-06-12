@@ -2450,7 +2450,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                         })
                       }
                     >
-                      <option value="">Seleccionar</option>
+                      <option value="">Seleccionar lectura</option>
                       <option value="OK">OK</option>
                       <option value="NO OK">NO OK</option>
                     </select>
