@@ -1190,37 +1190,47 @@ export default function App() {
   const checks = MACHINES[form.maquina];
 
   const validation = useMemo(() => {
-    return checks.map((item) => {
-      const value = values[item.id];
+  return checks.map((item) => {
+    const value = values[item.id];
 
-      if (item.type === "number") {
-        if (isQualityDailyCheckEmptyById(item.id, value)) {
-          return {
-            ...item,
-            value,
-            ok: true,
-            pendingQuality: true,
-          };
-        }
-        
-        const numeric = Number(value);
-        const ok = !Number.isNaN(numeric) && numeric >= item.min && numeric <= item.max;
-
-      if (item.type === "oknok") {
+    if (item.type === "number") {
+      if (isQualityDailyCheckEmptyById(item.id, value)) {
         return {
           ...item,
           value,
-          ok: value === "OK",
+          ok: true,
+          pendingQuality: true,
         };
       }
+
+      const numeric = Number(value);
+      const ok =
+        !Number.isNaN(numeric) &&
+        numeric >= item.min &&
+        numeric <= item.max;
 
       return {
         ...item,
         value,
-        ok: false,
+        ok,
       };
-    });
-  }, [checks, values]);
+    }
+
+    if (item.type === "oknok") {
+      return {
+        ...item,
+        value,
+        ok: value === "OK",
+      };
+    }
+
+    return {
+      ...item,
+      value,
+      ok: false,
+    };
+  });
+}, [checks, values]);
 
   const controlTurnoOk = form.maquina !== "Torno Hyundai" || values.controlTurno === "OK";
   const overallOk =
