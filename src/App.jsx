@@ -2580,7 +2580,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                     {item.type === "number" ? (
                       item.inputMode === "selectComparator" ? (
                         <select
-                          className="input text-slate-900 font-bold"
+                          className="input text-base text-slate-900 font-bold"
                           value={values[item.id] || ""}
                           onChange={(e) =>
                             setValues({
