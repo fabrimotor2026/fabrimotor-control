@@ -2615,7 +2615,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                           <option value="">Seleccionar lectura</option>
                           {comparatorOptions(item.selectMin || 20, item.selectMax || 80).map((reading) => (
                             <option key={reading} value={reading}>
-                              {reading > 0 ? `+${reading}` : reading}
+                              `+${reading}`
                             </option>
                           ))}
                         </select>
