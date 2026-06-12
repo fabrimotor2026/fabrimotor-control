@@ -2441,7 +2441,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                     </span>
 
                     <select
-                      className="input text-slate-900 font-bold"
+                      className="input text-base text-slate-900 font-bold"
                             value={values.controlTurno || ""}
                       onChange={(e) =>
                         setValues({
