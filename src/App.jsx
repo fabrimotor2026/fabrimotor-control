@@ -1502,6 +1502,10 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
     setTimerStart(null);
     setElapsedSeconds(0);
     setNowMs(Date.now());
+    setForm((previous) => ({
+      ...previous,
+      numeroPieza: "",
+    }));
 
     alert(`Verificación guardada correctamente.\n\nPieza: ${row.numeroPieza}\nResultado: ${row.resultado}\nBase de datos: ${isSupabaseConfigured ? "compartida" : "local"}`);
     } catch (error) {
@@ -2401,9 +2405,15 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
 
                 <Field label="Número de pieza">
                   <input
-                    className="input bg-slate-100 font-semibold text-slate-700"
+                    className="input text-base font-bold text-slate-900"
                     value={form.numeroPieza}
-                    readOnly
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        numeroPieza: e.target.value,
+                      })
+                    }
+                    placeholder="Introduce nº pieza"
                   />
                 </Field>
               </div>
