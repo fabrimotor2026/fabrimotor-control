@@ -1201,7 +1201,21 @@ export default function App() {
 
   const checks = MACHINES[form.maquina];
 
-  const validation = useMemo(() => {
+  const hasPreviousShiftRecord = records.some(
+  (record) =>
+    record.maquina === form.maquina &&
+    (record.referencia || "F-1012") === (form.referencia || "F-1012") &&
+    record.fecha === form.fecha &&
+    record.turno === form.turno &&
+    record.operario === form.operario
+);
+
+const isShiftStartCheckOptionalNow = (id, value) =>
+  hasPreviousShiftRecord &&
+  ["controlTurno", "c70", "c80", "c90", "c340", "c370"].includes(id) &&
+  isEmptyValue(value);
+
+const validation = useMemo(() => {
   return checks.map((item) => {
     const value = values[item.id];
 
@@ -1212,6 +1226,15 @@ export default function App() {
           value,
           ok: true,
           pendingQuality: true,
+        };
+      }
+
+      if (isShiftStartCheckOptionalNow(item.id, value)) {
+        return {
+          ...item,
+          value,
+          ok: true,
+          pendingShiftStart: true,
         };
       }
 
@@ -1229,6 +1252,15 @@ export default function App() {
     }
 
     if (item.type === "oknok") {
+      if (isShiftStartCheckOptionalNow(item.id, value)) {
+        return {
+          ...item,
+          value,
+          ok: true,
+          pendingShiftStart: true,
+        };
+      }
+
       return {
         ...item,
         value,
@@ -1242,9 +1274,12 @@ export default function App() {
       ok: false,
     };
   });
-}, [checks, values]);
+}, [checks, values, hasPreviousShiftRecord]);
 
-  const controlTurnoOk = form.maquina !== "Torno Hyundai" || values.controlTurno === "OK";
+  const controlTurnoOk =
+  form.maquina !== "Torno Hyundai" ||
+  values.controlTurno === "OK" ||
+  isShiftStartCheckOptionalNow("controlTurno", values.controlTurno);
   const overallOk =
    validation.every((v) => isQualityDailyValidationEmpty(v) || v.ok) &&
    controlTurnoOk;
