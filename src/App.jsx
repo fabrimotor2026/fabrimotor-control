@@ -2434,20 +2434,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                 </div>
 
                 <div className="rounded-2xl border border-amber-300 bg-white p-4">
-                  <div className="font-semibold text-slate-900 mb-2">
-                    Verificación obligatoria por turno
-                  </div>
-
-                  <div className="text-xs text-slate-600 mb-3 leading-relaxed">
-                    Turnos:
-                    <br />
-                    • 06:00 → 14:00
-                    <br />
-                    • 14:00 → 22:00
-                    <br />
-                    • 22:00 → 06:00
-                  </div>
-
+                  
                   <label className="block">
                     <span className="mb-1.5 block text-sm font-medium text-slate-700">
                       Control Ecoroll / Refrigerante
