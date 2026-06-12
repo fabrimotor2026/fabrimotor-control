@@ -356,6 +356,10 @@ const MACHINES = {
       min: 101.9,
       max: 102.1,
       type: "number",
+      inputMode: "selectRange",
+      rangeMin: 101.80,
+      rangeMax: 102.20,
+      rangeStep: 0.01,
       frecuencia:
         "Registrar la primera pieza del turno y después las piezas nº 16, 32, 48, 64, 80, 96 y 112.",
     },
