@@ -1194,14 +1194,17 @@ export default function App() {
       const value = values[item.id];
 
       if (item.type === "number") {
+        if (isQualityDailyCheckEmptyById(item.id, value)) {
+          return {
+            ...item,
+            value,
+            ok: true,
+            pendingQuality: true,
+          };
+        }
+        
         const numeric = Number(value);
         const ok = !Number.isNaN(numeric) && numeric >= item.min && numeric <= item.max;
-        return {
-          ...item,
-          value,
-          ok,
-        };
-      }
 
       if (item.type === "oknok") {
         return {
@@ -1220,7 +1223,9 @@ export default function App() {
   }, [checks, values]);
 
   const controlTurnoOk = form.maquina !== "Torno Hyundai" || values.controlTurno === "OK";
-  const overallOk = validation.every((v) => v.ok) && controlTurnoOk;
+  const overallOk =
+   validation.every((v) => isQualityDailyValidationEmpty(v) || v.ok) &&
+   controlTurnoOk;
 
   const buildSheetId = (data) => {
     if (!data.fecha || !data.turno || !data.maquina) {
@@ -1749,7 +1754,19 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
       alert("Debe introducir el número de pieza.");
       return;
     }
+const QUALITY_DAILY_CHECK_IDS = ["c280", "c120"];
 
+function isEmptyValue(value) {
+  return value === undefined || value === null || value === "";
+}
+
+function isQualityDailyCheckEmptyById(id, value) {
+  return QUALITY_DAILY_CHECK_IDS.includes(id) && isEmptyValue(value);
+}
+
+function isQualityDailyValidationEmpty(check) {
+  return isQualityDailyCheckEmptyById(check.id, check.value);
+}
     localStorage.setItem("startupReference", selectedReferenceData.id);
     localStorage.setItem("startupPiece", piece);
     localStorage.setItem("startupOF", of);
