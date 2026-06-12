@@ -1486,7 +1486,6 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
     setElapsedSeconds(0);
     setNowMs(Date.now());
 
-    alert(`Verificación guardada correctamente.\n\nPieza: ${row.numeroPieza}\nResultado: ${row.resultado}\nBase de datos: ${isSupabaseConfigured ? "compartida" : "local"}`);
     } catch (error) {
       console.error("Error guardando verificación:", error);
       alert(`Error técnico al guardar la verificación:\n\n${error?.message || String(error)}`);
