@@ -2533,11 +2533,16 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                           </div>
                         )}     
                           <div className="space-y-1 text-xs text-slate-500">
-                            {item.type === "number" && (
-                              <div>
-                                Tolerancia: {item.id === "c30" || item.id === "c40" ? `+${item.min} → +${item.max}` : item.displayMin && item.displayMax ? `${item.displayMin} → ${item.displayMax}` : `${item.min} → ${item.max}`}
-                              </div>
-                            )}
+                            {item.frecuencia && (
+                             <div className="space-y-1 text-xs text-slate-500">
+                              <div className="rounded-2xl border border-blue-200 bg-blue-50 p-3 text-base font-bold leading-relaxed text-blue-900">
+                               <div className="mb-1 text-xs font-black uppercase tracking-wide text-blue-700">
+                                 Frecuencia de control
+                                </div>
+                                <div>{item.frecuencia}</div>
+                               </div>
+                            </div>
+                         )}
 
                             {item.frecuencia && (
                               <div className="rounded-2xl border border-blue-200 bg-blue-50 p-3 text-base font-bold leading-relaxed text-blue-900">
