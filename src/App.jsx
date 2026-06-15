@@ -500,7 +500,7 @@ const MACHINES = {
       max: 19.20,
       type: "number",
 
-      inputMode: "selectrange",
+      inputMode: "selectRange",
       rangeMin: 18.90,
       rangeMax: 19.20,
       rangeStep: 0.10,
