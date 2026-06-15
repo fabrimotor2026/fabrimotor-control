@@ -496,9 +496,15 @@ const MACHINES = {
       control: "Nº370 · 19,1 +0/-1",
       comentario:
         "Pie de rey digital [PR05]",
-      min: 18.1,
-      max: 19.1,
+      min: 18.90,
+      max: 19.20,
       type: "number",
+
+      inputMode: "selectrange",
+      rangeMin: 18.90,
+      rangeMax: 19.20,
+      rangeStep: 0.10,
+      
       frecuencia:
         "Registrar únicamente al inicio de turno.",
     },
