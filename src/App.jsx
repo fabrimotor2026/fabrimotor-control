@@ -3529,55 +3529,10 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
               }
             />
           </Field>
-          
-        <div className="grid gap-3 sm:grid-cols-3">
-          <Field label="Peso pieza kg">
-            <input
-              className="input text-base font-bold text-slate-900"
-              type="number"
-              step="0.001"
-              value={incidentForm.pesoKg}
-              onChange={(e) =>
-                setIncidentForm({
-                  ...incidentForm,
-                  pesoKg: e.target.value,
-                })
-              }
-             />
-            </Field>
-            
-            <Field label="Coste €/kg">
-              <input
-                className="input text-base font-bold text-slate-900"
-                type="number"
-                step="0.01"
-                value={incidentForm.costeKg}
-                onChange={(e) =>
-                  setIncidentForm({
-                    ...incidentForm,
-                    costeKg: e.target.value,
-                  })
-                }
-              />
-            </Field>
-            
-            <Field label="Coste total">
-              <input
-                className="input bg-slate-100 text-base font-black text-slate-900"
-                value={`${(
-                  Number(incidentForm.pesoKg || 0) *
-                  Number(incidentForm.costeKg || 0) *
-                  Number(incidentForm.piezasAfectadas || 1)
-                ).toFixed(2)} €`}
-                readOnly
-              />
-            </Field>
           </div>
-
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Recuperable">
+        
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Recuperable">
             <select
               className="input text-base font-bold text-slate-900"
               value={incidentForm.recuperable}
@@ -3615,11 +3570,12 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
           className="rounded-2xl bg-red-600 py-5 text-base text-white"
         >
           Guardar incidencia
-        </Button>
+        </Button> 
       </div>
-    </div>
-  </div>
-)} 
+      </div>
+      </div>
+      )} 
+
      {showIncidentsListModal && (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
     <div className="max-h-[90vh] w-full max-w-5xl overflow-auto rounded-3xl bg-white p-6 shadow-2xl">
