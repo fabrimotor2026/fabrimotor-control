@@ -3691,7 +3691,77 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                       );
                     }}
                   />
-                </div>
+
+                <div className="mt-3 grid gap-3 md:grid-cols-3">
+
+                  <Field label="Peso pieza kg">
+                    <input
+                      className="input text-lg font-bold text-slate-900"
+                      type="number"
+                      step="0.001"
+                      value={incident.pesoKg || ""}
+                      onChange={(e) => {
+                        const nextIncidents = incidents.map((item) =>
+                          item.id === incident.id
+                            ? {
+                                ...item,
+                                pesoKg: e.target.value,
+                                costeTotal:
+                                  Number(e.target.value || 0) *
+                                  Number(item.costeKg || 0) *
+                                  Number(item.piezasAfectadas || 1),
+                              }
+                            : item
+                        );
+
+                       setIncidents(nextIncidents);
+                       localStorage.setItem(
+                        "f1012-incidents",
+                        JSON.stringify(nextIncidents)
+                      );
+                    }}
+                  />
+                </Field>
+
+                <Field label="Coste €/kg">
+                  <input
+                    className="input text-lg font-bold text-slate-900"
+                    type="number"
+                    step="0.01"
+                    value={incident.costeKg || ""}
+                    onChange={(e) => {
+                      const nextIncidents = incidents.map((item) =>
+                        item.id === incident.id
+                          ? {
+                              ...item,
+                              costeKg: e.target.value,
+                              costeTotal:
+                                Number(item.pesoKg || 0) *
+                                Number(e.target.value || 0) *
+                                Number(item.piezasAfectadas || 1),
+                            }
+                          : item
+                      );
+                      setIncidents(nextIncidents);
+                      localStorage.setItem(
+                        "f1012-incidents",
+                        JSON.stringify(nextIncidents)
+                      );
+                    }}
+                  />
+                </Field>
+                
+                <Field label="Coste total">
+                  <input
+                    className="input bg-slate-100 text-lg font-black text-slate-900"
+                    value={`${Number(incident.costeTotal || 0).toFixed(2)} €`}
+                    readOnly
+                  />
+                </Field>
+                
+              </div>
+              
+              </div>
               )}
 
               {incident.revisadoPor && (
