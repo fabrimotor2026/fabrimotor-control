@@ -941,6 +941,30 @@ export default function App() {
       return [];
     }
   });
+
+  const [showIncidentModal, setShowIncidentModal] = useState(false);
+  const [showIncidentsListModal, setShowIncidentsListModal] = useState(false);
+
+  const [incidents,setIncidents] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("f1012-incidents") || "[]");
+    } catch {
+      return [];
+    }
+  });
+
+  const [incidentForm, setIncidentForm] = useState({
+    numeroPieza: "",
+    tipoFallo: "Mecanizado",
+    descripcion: "",
+    piezasAfectadas: "1",
+    piezaAnterior: "",
+    piezaPosterior: "",
+    recuperable: "NO",
+    chatarra: "SI",
+  });
+  
+
   const [currentUser, setCurrentUser] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem("fabrimotor-current-user") || "null");
@@ -1509,7 +1533,51 @@ ${error?.message || String(error)}`);
       alert(`Usuario eliminado localmente, pero no se ha podido eliminar en Supabase:\n\n${error?.message || String(error)}`);
     }
   };
+  
+  const saveIncident = () => {
+    if (!incidentForm.numeroPieza || !incidentForm.descripcion.trim()) {
+      alert("Debe indicar número de pieza y descripción de la incidencia.");
+      return;
+    }
 
+    const newIncident = {
+      id: crypto.randomUUID(),
+      fecha: form.fecha,
+      turno: form.turno,
+      maquina: form.maquina,
+      referencia: form.referencia,
+      referenciaNombre: form.referenciaNombre,
+      operario: form.operario,
+      numeroPieza: incidentForm.numeroPieza,
+      tipoFallo: incidentForm.tipoFallo,
+      descripcion: incidentForm.descripcion.trim(),
+      piezasAfectadas: incidentForm.piezasAfectadas,
+      piezaAnterior: incidentForm.piezaAnterior,
+      piezaPosterior: incidentForm.piezaPosterior,
+      recuperable: incidentForm.recuperable,
+      chatarra: incidentForm.chatarra,
+      estadoCalidad: "Pendiente",
+      createdAt: new Date().toISOString(),
+    };
+    
+    const nextIncidents = [newIncident, ...incidents];
+    setIncidents(nextIncidents);
+    localStorage.setItem("f1012-incidents", JSON.stringify(nextIncidents));
+    
+    setIncidentForm({
+      numeroPieza: "",
+      tipoFallo: "Mecanizado",
+      descripcion: "",
+      piezasAfectadas: "1",
+      piezaAnterior: "",
+      piezaPosterior: "",
+      recuperable: "NO",
+      chatarra: "SI",
+    });
+    
+    setShowIncidentModal(false);
+  };
+  
   const saveRecord = () => {
     try {
 
@@ -2814,6 +2882,21 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                 <Save className="mr-2 h-5 w-5" />
                 Guardar verificación
               </Button>
+
+              <Button
+                onClick={() => {
+                  setIncidentForm((previous) => ({
+                    ...previous,
+                    numeroPieza: form.numeroPieza || "",
+                  }));
+                  setShowIncidentModal(true);
+                }}
+                className="w-full rounded-2xl bg-red-600 py-6 text-base text-white shadow-md"
+              >
+                <AlertTriangle className="mr-2 h-5 w-5" />
+                Informar pieza NO OK
+              </Button>
+              
             </CardContent>
           </Card>
 
@@ -2852,6 +2935,13 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                     </Button>
                     <Button onClick={() => setShowCpkModal(true)} className="rounded-2xl bg-[#1f6f73] text-white">
                       <TrendingUp className="mr-2 h-4 w-4" /> CPK
+                    </Button>
+                    <Button
+                      onClick={() => setShowIncidentsListModal(true)}
+                      className="rounded-2xl bg-orange-600 text-white"
+                    >
+                      <AlertTriangle className="mr-2 h-4 w-4" /> 
+                      Incidencias
                     </Button>
                   </div>
                 </div>
@@ -2925,6 +3015,15 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                   >
                     <TrendingUp className="mr-2 h-5 w-5" />
                     Gráfico CPK 30/40
+                  </Button>
+
+                  <Button
+                    size="sm"
+                    onClick={() => setShowIncidentsListModal(true)}
+                    className="rounded-2xl border-0 bg-gradient-to-r from-orange-600 via-amber-600 to-yellow-500 px-5 py-5 text-base font-bold text-white shadow-lg transition-all duration-200 hover:scale-105 hover:shadow-orange-300"
+                  >
+                    <AlertTriangle className="mr-2 h-5 w-5" />
+                    Incidencias
                   </Button>
                 </div>
 
@@ -3321,6 +3420,236 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
         </div>
       )}
 
+     {showIncidentModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-2xl rounded-3xl bg-white p-6 shadow-2xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-xl font-black text-slate-900">
+                Informar pieza NO OK
+                </h2>
+                
+                <button
+                 onClick={() => setShowIncidentModal(false)}
+                 className="rounded-xl bg-slate-100 px-3 py-2 font-bold text-slate-700"
+                >
+                  Cerrar
+                </button>
+                </div>
+                
+                <div className="grid gap-4">
+                  <Field label="Número de pieza">
+                    <input
+                     className="input text-base font-bold text-slate-900"
+                     value={incidentForm.numeroPieza}
+                     onChange={(e) =>
+                      setIncidentForm({
+                        ...incidentForm,
+                        numeroPieza: e.target.value,
+                      })
+                    }
+                    />
+                  </Field>
+                  
+                  <Field label="Tipo de fallo">
+                    <select
+                    className="input text-base font-bold text-slate-900"
+                    value={incidentForm.tipoFallo}
+                    onChange={(e) =>
+                      setIncidentForm({
+                        ...incidentForm,
+                        tipoFallo: e.target.value,
+                      })
+                    }
+                  >
+                    <option>Mecanizado</option>
+                    <option>Forja</option>
+                    <option>Material</option>
+                    <option>Golpe / manipulación</option>
+                    <option>Otro</option>
+                  </select>
+                </Field>
+                
+                <Field label="Descripción de la incidencia">
+                  <textarea
+                   className="input min-h-[100px] text-base font-bold text-slate-900"
+                   value={incidentForm.descripcion}
+                   onChange={(e) =>
+                    setIncidentForm({
+                      ...incidentForm,
+                      descripcion: e.target.value,
+              })
+            }
+          />
+        </Field>
+
+        <div className="grid gap-3 sm:grid-cols-3">
+          <Field label="Nº piezas afectadas">
+            <input
+              className="input text-base font-bold text-slate-900"
+              value={incidentForm.piezasAfectadas}
+              onChange={(e) =>
+                setIncidentForm({
+                  ...incidentForm,
+                  piezasAfectadas: e.target.value,
+                })
+              }
+            />
+          </Field>
+
+          <Field label="Pieza anterior">
+            <input
+              className="input text-base font-bold text-slate-900"
+              value={incidentForm.piezaAnterior}
+              onChange={(e) =>
+                setIncidentForm({
+                  ...incidentForm,
+                  piezaAnterior: e.target.value,
+                })
+              }
+            />
+          </Field>
+
+          <Field label="Pieza posterior">
+            <input
+              className="input text-base font-bold text-slate-900"
+              value={incidentForm.piezaPosterior}
+              onChange={(e) =>
+                setIncidentForm({
+                  ...incidentForm,
+                  piezaPosterior: e.target.value,
+                })
+              }
+            />
+          </Field>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Recuperable">
+            <select
+              className="input text-base font-bold text-slate-900"
+              value={incidentForm.recuperable}
+              onChange={(e) =>
+                setIncidentForm({
+                  ...incidentForm,
+                  recuperable: e.target.value,
+                })
+              }
+            >
+              <option>NO</option>
+              <option>SI</option>
+            </select>
+          </Field>
+
+          <Field label="Chatarra">
+            <select
+              className="input text-base font-bold text-slate-900"
+              value={incidentForm.chatarra}
+              onChange={(e) =>
+                setIncidentForm({
+                  ...incidentForm,
+                  chatarra: e.target.value,
+                })
+              }
+            >
+              <option>SI</option>
+              <option>NO</option>
+            </select>
+          </Field>
+        </div>
+
+        <Button
+          onClick={saveIncident}
+          className="rounded-2xl bg-red-600 py-5 text-base text-white"
+        >
+          Guardar incidencia
+        </Button>
+      </div>
+    </div>
+  </div>
+)} 
+     {showIncidentsListModal && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+    <div className="max-h-[90vh] w-full max-w-5xl overflow-auto rounded-3xl bg-white p-6 shadow-2xl">
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-xl font-black text-slate-900">
+          Incidencias / Chatarra
+        </h2>
+
+        <button
+          onClick={() => setShowIncidentsListModal(false)}
+          className="rounded-xl bg-slate-100 px-3 py-2 font-bold text-slate-700"
+        >
+          Cerrar
+        </button>
+      </div>
+
+      {incidents.length === 0 ? (
+        <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">
+          No hay incidencias registradas.
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {incidents.map((incident) => (
+            <div
+              key={incident.id}
+              className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+            >
+              <div className="flex items-center justify-between">
+                <div className="font-black text-slate-900">
+                  Pieza {incident.numeroPieza}
+                </div>
+
+                <div className="rounded-full bg-red-100 px-3 py-1 text-xs font-black text-red-700">
+                  {incident.chatarra === "SI" ? "CHATARRA" : "NO OK"}
+                </div>
+              </div>
+
+              <div className="mt-2 text-sm text-slate-700">
+                <div>
+                  <strong>Fecha:</strong> {incident.fecha}
+                </div>
+                <div>
+                  <strong>Turno:</strong> {incident.turno}
+                </div>
+                <div>
+                  <strong>Máquina:</strong> {incident.maquina}
+                </div>
+                <div>
+                  <strong>Operario:</strong> {incident.operario}
+                </div>
+                <div>
+                  <strong>Tipo fallo:</strong> {incident.tipoFallo}
+                </div>
+                <div>
+                  <strong>Piezas afectadas:</strong>{" "}
+                  {incident.piezasAfectadas}
+                </div>
+                <div>
+                  <strong>Pieza anterior:</strong>{" "}
+                  {incident.piezaAnterior || "-"}
+                </div>
+                <div>
+                  <strong>Pieza posterior:</strong>{" "}
+                  {incident.piezaPosterior || "-"}
+                </div>
+                <div>
+                  <strong>Recuperable:</strong> {incident.recuperable}
+                </div>
+                <div>
+                  <strong>Estado Calidad:</strong> {incident.estadoCalidad}
+                </div>
+              </div>
+
+              <div className="mt-3 rounded-xl bg-white p-3 text-sm text-slate-800">
+                <strong>Descripción:</strong> {incident.descripcion}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  </div>
+)}  
       {showRejectsModal && (
         <RejectsModalComponent
           records={rejectedRecords}
@@ -3329,7 +3658,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
           onClose={() => setShowRejectsModal(false)}
         />
       )}
-
+      
       {showImportantModal && (
         <div style={MODAL_OVERLAY_STYLE}>
           <div style={MODAL_PANEL_LG_STYLE}>
@@ -3854,6 +4183,7 @@ function RejectsModal({ records, getRejectedChecks, buildSheetName, onClose }) {
   const [rejectOperario, setRejectOperario] = useState("");
   const [rejectPieza, setRejectPieza] = useState("");
   const [rejectMaquina, setRejectMaquina] = useState("");
+  const [showIncidentsListModal, setShowIncidentsListModal] = useState(false);
 
   const filteredRejects = records.filter((record) => {
     const matchFrom = !rejectDateFrom || record.fecha >= rejectDateFrom;
