@@ -962,6 +962,8 @@ export default function App() {
     piezaPosterior: "",
     recuperable: "NO",
     chatarra: "SI",
+    pesoKg: "",
+    costeKg: "",
   });
   
 
@@ -1557,6 +1559,12 @@ ${error?.message || String(error)}`);
       recuperable: incidentForm.recuperable,
       chatarra: incidentForm.chatarra,
       estadoCalidad: "Pendiente",
+      pesoKg: incidentForm.pesoKg,
+      costeKg: incidentForm.costeKg,
+      costeTotal:
+      Number(incidentForm.pesoKg || 0) *
+      Number(incidentForm.costeKg || 0) *
+      Number(incidentForm.piezasAfectadas || 1),
       createdAt: new Date().toISOString(),
     };
     
@@ -1573,6 +1581,8 @@ ${error?.message || String(error)}`);
       piezaPosterior: "",
       recuperable: "NO",
       chatarra: "SI",
+      pesoKg: "",
+      costeKg: "",
     });
     
     setShowIncidentModal(false);
@@ -3463,9 +3473,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                   >
                     <option>Mecanizado</option>
                     <option>Forja</option>
-                    <option>Material</option>
                     <option>Golpe / manipulación</option>
-                    <option>Otro</option>
                   </select>
                 </Field>
                 
@@ -3521,6 +3529,51 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
               }
             />
           </Field>
+          
+        <div className="grid gap-3 sm:grid-cols-3">
+          <Field label="Peso pieza kg">
+            <input
+              className="input text-base font-bold text-slate-900"
+              type="number"
+              step="0.001"
+              value={incidentForm.pesoKg}
+              onChange={(e) =>
+                setIncidentForm({
+                  ...incidentForm,
+                  pesoKg: e.target.value,
+                })
+              }
+             />
+            </Field>
+            
+            <Field label="Coste €/kg">
+              <input
+                className="input text-base font-bold text-slate-900"
+                type="number"
+                step="0.01"
+                value={incidentForm.costeKg}
+                onChange={(e) =>
+                  setIncidentForm({
+                    ...incidentForm,
+                    costeKg: e.target.value,
+                  })
+                }
+              />
+            </Field>
+            
+            <Field label="Coste total">
+              <input
+                className="input bg-slate-100 text-base font-black text-slate-900"
+                value={`${(
+                  Number(incidentForm.pesoKg || 0) *
+                  Number(incidentForm.costeKg || 0) *
+                  Number(incidentForm.piezasAfectadas || 1)
+                ).toFixed(2)} €`}
+                readOnly
+              />
+            </Field>
+          </div>
+
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
@@ -3605,51 +3658,98 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
               </div>
 
               <div className="mt-2 text-sm text-slate-700">
-                <div>
-                  <strong>Fecha:</strong> {incident.fecha}
-                </div>
-                <div>
-                  <strong>Turno:</strong> {incident.turno}
-                </div>
-                <div>
-                  <strong>Máquina:</strong> {incident.maquina}
-                </div>
-                <div>
-                  <strong>Operario:</strong> {incident.operario}
-                </div>
-                <div>
-                  <strong>Tipo fallo:</strong> {incident.tipoFallo}
-                </div>
-                <div>
-                  <strong>Piezas afectadas:</strong>{" "}
-                  {incident.piezasAfectadas}
-                </div>
-                <div>
-                  <strong>Pieza anterior:</strong>{" "}
-                  {incident.piezaAnterior || "-"}
-                </div>
-                <div>
-                  <strong>Pieza posterior:</strong>{" "}
-                  {incident.piezaPosterior || "-"}
-                </div>
-                <div>
-                  <strong>Recuperable:</strong> {incident.recuperable}
-                </div>
-                <div>
-                  <strong>Estado Calidad:</strong> {incident.estadoCalidad}
-                </div>
+                <div><strong>Fecha:</strong> {incident.fecha}</div>
+                <div><strong>Turno:</strong> {incident.turno}</div>
+                <div><strong>Máquina:</strong> {incident.maquina}</div>
+                <div><strong>Operario:</strong> {incident.operario}</div>
+                <div><strong>Tipo fallo:</strong> {incident.tipoFallo}</div>
+                <div><strong>Piezas afectadas:</strong> {incident.piezasAfectadas}</div>
+                <div><strong>Pieza anterior:</strong> {incident.piezaAnterior || "-"}</div>
+                <div><strong>Pieza posterior:</strong> {incident.piezaPosterior || "-"}</div>
+                <div><strong>Recuperable:</strong> {incident.recuperable}</div>
+                <div><strong>Estado Calidad:</strong> {incident.estadoCalidad || "Pendiente"}</div>
               </div>
 
               <div className="mt-3 rounded-xl bg-white p-3 text-sm text-slate-800">
                 <strong>Descripción:</strong> {incident.descripcion}
               </div>
+
+              {!isOperatorView && (
+                <div className="mt-4 rounded-2xl border border-blue-200 bg-blue-50 p-3">
+                  <div className="mb-2 text-sm font-black text-blue-900">
+                    Gestión Calidad
+                  </div>
+
+                  <select
+                    className="input mb-3 text-base font-bold text-slate-900"
+                    value={incident.estadoCalidad || "Pendiente"}
+                    onChange={(e) => {
+                      const nextIncidents = incidents.map((item) =>
+                        item.id === incident.id
+                          ? {
+                              ...item,
+                              estadoCalidad: e.target.value,
+                              revisadoPor: currentUser
+                                ? `${currentUser.username} - ${currentUser.name}`
+                                : "",
+                              fechaRevision: new Date().toLocaleString("es-ES"),
+                            }
+                          : item
+                      );
+
+                      setIncidents(nextIncidents);
+                      localStorage.setItem(
+                        "f1012-incidents",
+                        JSON.stringify(nextIncidents)
+                      );
+                    }}
+                  >
+                    <option>Pendiente</option>
+                    <option>En estudio</option>
+                    <option>Aceptada</option>
+                    <option>Rechazada</option>
+                  </select>
+
+                  <textarea
+                    className="input min-h-[80px] text-sm"
+                    placeholder="Comentario de Calidad..."
+                    value={incident.comentarioCalidad || ""}
+                    onChange={(e) => {
+                      const nextIncidents = incidents.map((item) =>
+                        item.id === incident.id
+                          ? {
+                              ...item,
+                              comentarioCalidad: e.target.value,
+                              revisadoPor: currentUser
+                                ? `${currentUser.username} - ${currentUser.name}`
+                                : "",
+                              fechaRevision: new Date().toLocaleString("es-ES"),
+                            }
+                          : item
+                      );
+
+                      setIncidents(nextIncidents);
+                      localStorage.setItem(
+                        "f1012-incidents",
+                        JSON.stringify(nextIncidents)
+                      );
+                    }}
+                  />
+                </div>
+              )}
+
+              {incident.revisadoPor && (
+                <div className="mt-2 text-xs text-slate-500">
+                  Revisado por: {incident.revisadoPor} · {incident.fechaRevision}
+                </div>
+              )}
             </div>
           ))}
         </div>
       )}
     </div>
   </div>
-)}  
+)}
       {showRejectsModal && (
         <RejectsModalComponent
           records={rejectedRecords}
