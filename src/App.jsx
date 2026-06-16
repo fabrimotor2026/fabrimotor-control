@@ -954,7 +954,9 @@ export default function App() {
   });
 
   const [incidentForm, setIncidentForm] = useState({
-    numeroPieza: "",
+    codigoEtiqueta: "",
+    numeroFabricacion: "",
+    numeroColada: "",
     tipoFallo: "Mecanizado",
     descripcion: "",
     piezasAfectadas: "1",
@@ -1537,8 +1539,8 @@ ${error?.message || String(error)}`);
   };
   
   const saveIncident = () => {
-    if (!incidentForm.numeroPieza || !incidentForm.descripcion.trim()) {
-      alert("Debe indicar número de pieza y descripción de la incidencia.");
+    if (!incidentForm.codigoEtiqueta || !incidentForm.descripcion.trim()) {
+      alert("Debe indicar código etiqueta y descripción de la incidencia.");
       return;
     }
 
@@ -1550,14 +1552,17 @@ ${error?.message || String(error)}`);
       referencia: form.referencia,
       referenciaNombre: form.referenciaNombre,
       operario: form.operario,
-      numeroPieza: incidentForm.numeroPieza,
+      numeroFabricacion: incidentForm.numeroFabricacion,
+      numeroColada: incidentForm.numeroColada,
+      numeroPieza: incidentForm.codigoEtiqueta,
+      codigoEtiqueta: incidentForm.codigoEtiqueta,
       tipoFallo: incidentForm.tipoFallo,
       descripcion: incidentForm.descripcion.trim(),
       piezasAfectadas: incidentForm.piezasAfectadas,
       piezaAnterior: incidentForm.piezaAnterior,
       piezaPosterior: incidentForm.piezaPosterior,
-      recuperable: incidentForm.recuperable,
-      chatarra: incidentForm.chatarra,
+      recuperable: "Pendiente Calidad",
+      chatarra: "Pendiente Calidad",
       estadoCalidad: "Pendiente",
       pesoKg: incidentForm.pesoKg,
       costeKg: incidentForm.costeKg,
@@ -1845,6 +1850,37 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
   const currentDateOk = currentDateRecords.filter((record) => record.resultado === "OK").length;
   const currentDateNok = currentDateRecords.filter((record) => record.resultado === "NO OK").length;
   const recentRecords = records.slice(0, 6);
+  const currentMonthKey = form.fecha.slice(0, 7);
+
+  const currentDateIncidents = incidents.filter(
+    (incident) => incident.fecha === form.fecha
+  );
+
+  const currentMonthIncidents = incidents.filter((incident) =>
+    String(incident.fecha || "").startsWith(currentMonthKey)
+);
+
+  const qualityCostToday = currentDateIncidents.reduce(
+    (sum, incident) => sum + Number(incident.costeTotal || 0),
+    0
+  );
+
+  const qualityCostMonth = currentMonthIncidents.reduce(
+    (sum, incident) => sum + Number(incident.costeTotal || 0),
+    0
+  );
+
+  const scrapPiecesMonth = currentMonthIncidents
+    .filter((incident) => incident.chatarra === "SI")
+    .reduce(
+      (sum, incident) => sum + Number(incident.piezasAfectadas || 0),
+      0
+    );
+
+  const pendingIncidents = incidents.filter(
+    (incident) =>
+      (incident.estadoCalidad || "Pendiente") === "Pendiente"
+  ).length;
 
   const handleLogin = (user) => {
     setCurrentUser(user);
@@ -2549,19 +2585,6 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                   />
                 </Field>
 
-                <Field label="Número de pieza">
-                  <input
-                    className="input text-base font-bold text-slate-900"
-                    value={form.numeroPieza}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        numeroPieza: e.target.value,
-                      })
-                    }
-                    placeholder="Introduce nº pieza"
-                  />
-                </Field>
               </div>
 
               <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
@@ -2930,6 +2953,29 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                 <DashboardKpi label="Total histórico" value={records.length} tone="slate" />
               </div>
 
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <DashboardKpi
+                label="Coste calidad hoy"
+                value={`${qualityCostToday.toFixed(2)} €`}
+                tone="red"
+              />
+              <DashboardKpi
+                label="Coste calidad mes"
+                value={`${qualityCostMonth.toFixed(2)} €`}
+                tone="red"
+              />
+              <DashboardKpi
+                label="Chatarra mes"
+                value={scrapPiecesMonth}
+                tone="slate"
+              />
+              <DashboardKpi
+                label="Incidencias pendientes"
+                value={pendingIncidents}
+                tone="blue"
+              />
+            </div>
+
               <div className="grid gap-4 xl:grid-cols-2">
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                   <div className="mb-3 text-sm font-black uppercase tracking-wide text-slate-700">Accesos rápidos</div>
@@ -3043,18 +3089,46 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
               </div>
 
               <div className="mb-4 rounded-2xl bg-slate-50 p-4">
-                <div className="mb-3 rounded-2xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
+                
+                <div className="mb-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  <DashboardKpi
+                    label="Coste calidad hoy"
+                    value={`${qualityCostToday.toFixed(2)} €`}
+                    tone="red"
+                  />
+                  <DashboardKpi
+                    label="Coste calidad mes"
+                    value={`${qualityCostMonth.toFixed(2)} €`}
+                    tone="red"
+                  />
+                  <DashboardKpi
+                    label="Chatarra mes"
+                    value={scrapPiecesMonth}
+                    tone="slate"
+                  />
+                  <DashboardKpi
+                    label="Incidencias pendientes"
+                    value={pendingIncidents}
+                    tone="blue"
+                  />
+                </div>
+                
+                <div className="mb-3 rounded-2xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">               
+                                
                   <div className="font-bold">
                     {activeSheetName ? "Hoja seleccionada" : "Histórico general"}
                   </div>
+                  
                   <div>
                     {activeSheetName || "Mostrando registros según filtros seleccionados."}
                   </div>
+                  
                   <div className="mt-1 text-xs">
                     {filteredRecords.length} registros encontrados.
                   </div>
-                </div>
 
+                </div>               
+                
                 <div className="grid gap-3 md:grid-cols-6">
                   <Field label="Filtrar por fecha">
                     <input
@@ -3447,19 +3521,48 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                 </div>
                 
                 <div className="grid gap-4">
-                  <Field label="Número de pieza">
+                  <Field label="Código etiqueta">
                     <input
                      className="input text-base font-bold text-slate-900"
-                     value={incidentForm.numeroPieza}
+                     value={incidentForm.codigoEtiqueta}
                      onChange={(e) =>
                       setIncidentForm({
                         ...incidentForm,
-                        numeroPieza: e.target.value,
+                        codigoEtiqueta: e.target.value,
                       })
                     }
                     />
                   </Field>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Field label="Nº fabricación">
+                    <input
+                      className="input text-base font-bold text-slate-900"
+                      value={incidentForm.numeroFabricacion}
+                      onChange={(e) =>
+                        setIncidentForm({
+                          ...incidentForm,
+                          numeroFabricacion: e.target.value,
+                        })
+                      }
+                    />
+                  </Field>
+
+                  <Field label="Nº colada">
+                    <input
+                      className="input text-base font-bold text-slate-900"
+                      value={incidentForm.numeroColada}
+                      onChange={(e) =>
+                        setIncidentForm({
+                          ...incidentForm,
+                          numeroColada: e.target.value,
+                        })
+                      }
+                    />
+                  </Field>
                   
+                </div>
+
                   <Field label="Tipo de fallo">
                     <select
                     className="input text-base font-bold text-slate-900"
@@ -3478,6 +3581,8 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                 </Field>
                 
                 <Field label="Descripción de la incidencia">
+                
+                
                   <textarea
                    className="input min-h-[100px] text-base font-bold text-slate-900"
                    value={incidentForm.descripcion}
@@ -3531,40 +3636,6 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
           </Field>
           </div>
         
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Recuperable">
-            <select
-              className="input text-base font-bold text-slate-900"
-              value={incidentForm.recuperable}
-              onChange={(e) =>
-                setIncidentForm({
-                  ...incidentForm,
-                  recuperable: e.target.value,
-                })
-              }
-            >
-              <option>NO</option>
-              <option>SI</option>
-            </select>
-          </Field>
-
-          <Field label="Chatarra">
-            <select
-              className="input text-base font-bold text-slate-900"
-              value={incidentForm.chatarra}
-              onChange={(e) =>
-                setIncidentForm({
-                  ...incidentForm,
-                  chatarra: e.target.value,
-                })
-              }
-            >
-              <option>SI</option>
-              <option>NO</option>
-            </select>
-          </Field>
-        </div>
-
         <Button
           onClick={saveIncident}
           className="rounded-2xl bg-red-600 py-5 text-base text-white"
@@ -3605,7 +3676,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
             >
               <div className="flex items-center justify-between">
                 <div className="font-black text-slate-900">
-                  Pieza {incident.numeroPieza}
+                  Código etiqueta {incident.codigoEtiqueta || incident.numeroPieza}
                 </div>
 
                 <div className="rounded-full bg-red-100 px-3 py-1 text-xs font-black text-red-700">
@@ -3620,10 +3691,11 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                 <div><strong>Operario:</strong> {incident.operario}</div>
                 <div><strong>Tipo fallo:</strong> {incident.tipoFallo}</div>
                 <div><strong>Piezas afectadas:</strong> {incident.piezasAfectadas}</div>
+                <div><strong>Nº fabricación:</strong> {incident.numeroFabricacion || "-"}</div>
+                <div><strong>Nº colada:</strong> {incident.numeroColada || "-"}</div>           
                 <div><strong>Pieza anterior:</strong> {incident.piezaAnterior || "-"}</div>
                 <div><strong>Pieza posterior:</strong> {incident.piezaPosterior || "-"}</div>
-                <div><strong>Recuperable:</strong> {incident.recuperable}</div>
-                <div><strong>Estado Calidad:</strong> {incident.estadoCalidad || "Pendiente"}</div>
+                <div><strong>Recuperable:</strong> {incident.recuperable}</div>           
               </div>
 
               <div className="mt-3 rounded-xl bg-white p-3 text-sm text-slate-800">
@@ -3634,37 +3706,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                 <div className="mt-4 rounded-2xl border border-blue-200 bg-blue-50 p-3">
                   <div className="mb-2 text-sm font-black text-blue-900">
                     Gestión Calidad
-                  </div>
-
-                  <select
-                    className="input mb-3 text-base font-bold text-slate-900"
-                    value={incident.estadoCalidad || "Pendiente"}
-                    onChange={(e) => {
-                      const nextIncidents = incidents.map((item) =>
-                        item.id === incident.id
-                          ? {
-                              ...item,
-                              estadoCalidad: e.target.value,
-                              revisadoPor: currentUser
-                                ? `${currentUser.username} - ${currentUser.name}`
-                                : "",
-                              fechaRevision: new Date().toLocaleString("es-ES"),
-                            }
-                          : item
-                      );
-
-                      setIncidents(nextIncidents);
-                      localStorage.setItem(
-                        "f1012-incidents",
-                        JSON.stringify(nextIncidents)
-                      );
-                    }}
-                  >
-                    <option>Pendiente</option>
-                    <option>En estudio</option>
-                    <option>Aceptada</option>
-                    <option>Rechazada</option>
-                  </select>
+                  </div>                  
 
                   <textarea
                     className="input min-h-[80px] text-sm"
@@ -3691,57 +3733,91 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                       );
                     }}
                   />
+                  <div className="mt-3 grid gap-3 md:grid-cols-2">
+                    <Field label="Recuperable">
+                      <select
+                        className="input text-base font-bold text-slate-900"
+                        value={incident.recuperable || "Pendiente Calidad"}
+                        onChange={(e) => {
+                          const nextIncidents = incidents.map((item) =>
+                            item.id === incident.id
+                              ? {
+                                  ...item,
+                                  recuperable: e.target.value,
+                                  revisadoPor: currentUser
+                                  ? `${currentUser.username} - ${currentUser.name}`
+                                  : "",
+                                fechaRevision: new Date().toLocaleString("es-ES"),
+                              }
+                              : item
+                          );
+                          
+                          setIncidents(nextIncidents);
+                          localStorage.setItem(
+                            "f1012-incidents",
+                            JSON.stringify(nextIncidents)
+                          );
+                        }}
+                      >
+                        <option>Pendiente Calidad</option>
+                        <option>SI</option>
+                        <option>NO</option>
+                      </select>
+                    </Field>
+                    
+                    <Field label="Chatarra">
+                      <select
+                        className="input text-base font-bold text-slate-900"
+                        value={incident.chatarra || "Pendiente Calidad"}
+                        onChange={(e) => {
+                          const nextIncidents = incidents.map((item) =>
+                            item.id === incident.id
+                              ? {
+                                  ...item,
+                                  chatarra: e.target.value,
+                                  revisadoPor: currentUser
+                                    ? `${currentUser.username} - ${currentUser.name}`
+                                    : "",
+                                  fechaRevision: new Date().toLocaleString("es-ES"),
+                                }
+                              : item
+                          );
+                          
+                          setIncidents(nextIncidents);
+                          localStorage.setItem(
+                            "f1012-incidents",
+                            JSON.stringify(nextIncidents)
+                          );
+                        }}
+                      >
+                        <option>Pendiente Calidad</option>
+                        <option>SI</option>
+                        <option>NO</option>
+                      </select>
+                    </Field>
+                  </div>
 
                 <div className="mt-3 grid gap-3 md:grid-cols-3">
-
-                  <Field label="Peso pieza kg">
-                    <input
-                      className="input text-lg font-bold text-slate-900"
-                      type="number"
-                      step="0.001"
-                      value={incident.pesoKg || ""}
-                      onChange={(e) => {
-                        const nextIncidents = incidents.map((item) =>
-                          item.id === incident.id
-                            ? {
-                                ...item,
-                                pesoKg: e.target.value,
-                                costeTotal:
-                                  Number(e.target.value || 0) *
-                                  Number(item.costeKg || 0) *
-                                  Number(item.piezasAfectadas || 1),
-                              }
-                            : item
-                        );
-
-                       setIncidents(nextIncidents);
-                       localStorage.setItem(
-                        "f1012-incidents",
-                        JSON.stringify(nextIncidents)
-                      );
-                    }}
-                  />
-                </Field>
-
-                <Field label="Coste €/kg">
+                
+                <Field label="Coste €/unidad">
                   <input
-                    className="input text-lg font-bold text-slate-900"
+                    className="input text-base font-bold text-slate-900"
                     type="number"
                     step="0.01"
-                    value={incident.costeKg || ""}
+                    value={incident.costeUnidad || ""}
                     onChange={(e) => {
                       const nextIncidents = incidents.map((item) =>
                         item.id === incident.id
                           ? {
                               ...item,
-                              costeKg: e.target.value,
+                              costeUnidad: e.target.value,
                               costeTotal:
-                                Number(item.pesoKg || 0) *
-                                Number(e.target.value || 0) *
-                                Number(item.piezasAfectadas || 1),
+                                Number(item.piezasAfectadas || 0) *
+                                Number(e.target.value || 0),
                             }
                           : item
                       );
+                      
                       setIncidents(nextIncidents);
                       localStorage.setItem(
                         "f1012-incidents",
@@ -3749,8 +3825,8 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                       );
                     }}
                   />
-                </Field>
-                
+                </Field>  
+
                 <Field label="Coste total">
                   <input
                     className="input bg-slate-100 text-lg font-black text-slate-900"
