@@ -1883,6 +1883,21 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
       0
     );
 
+  const totalIncidencias = incidents.length;
+  
+  const accionesAbiertas = incidents.filter(
+    (i) => i.estadoAccion === "Abierta"
+  ).length;
+  
+  const accionesCerradas = incidents.filter(
+    (i) => i.estadoAccion === "Cerrada"
+  ).length;
+  
+  const costeTotalCalidad = incidents.reduce(
+    (sum, item) => sum + Number(item.costeTotal || 0),
+    0
+  );
+
   const pendingIncidents = incidents.filter(
     (incident) =>
       (incident.estadoCalidad || "Pendiente") === "Pendiente"
@@ -3092,6 +3107,32 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                 <div className="rounded-full bg-slate-100 px-3 py-1 text-sm text-slate-600">
                   {filteredRecords.length} registros
                 </div>
+              </div>
+              
+              <div className="mb-4 grid gap-4 md:grid-cols-4">
+                <DashboardKpi
+                  label="Incidencias"
+                  value={totalIncidencias}
+                  tone="blue"
+                />
+                
+                <DashboardKpi
+                  label="Acciones abiertas"
+                  value={accionesAbiertas}
+                  tone="amber"
+                />
+                
+                <DashboardKpi
+                  label="Acciones cerradas"
+                  value={accionesCerradas}
+                  tone="emerald"
+                />
+                
+                <DashboardKpi
+                  label="Coste acumulado"
+                  value={`${costeTotalCalidad.toFixed(2)} €`}
+                  tone="red"
+                />
               </div>
 
               <div className="mb-4 rounded-2xl bg-slate-50 p-4">
