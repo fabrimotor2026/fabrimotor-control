@@ -674,6 +674,36 @@ async function deleteSharedRecord(recordId) {
   if (error) throw error;
 }
 
+async function fetchSharedIncidents() {
+  if (!isSupabaseConfigured || !supabase) return null;
+
+  const { data, error } = await supabase
+    .from("fabr_motor_incidents")
+    .select("data")
+    .order("saved_at_ms", { ascending: false });
+
+  if (error) throw error;
+
+  return (data || []).map((row) => row.data).filter(Boolean);
+}
+
+async function upsertSharedIncident(incident) {
+  if (!isSupabaseConfigured || !supabase || !incident?.id) return;
+
+  const { error } = await supabase.from("fabr_motor_incidents").upsert({
+    id: incident.id,
+    reference: incident.referencia || "F-1012",
+    machine: incident.maquina || "",
+    operator_name: incident.operario || "",
+    label_code: incident.codigoEtiqueta || incident.numeroPieza || "",
+    result: incident.chatarra || "",
+    saved_at_ms: Date.parse(incident.createdAt) || Date.now(),
+    data: incident,
+    updated_at: new Date().toISOString(),
+  });
+
+  if (error) throw error;
+}
 
 function normalizeSharedRole(role) {
   const value = String(role || "").trim();
@@ -955,6 +985,36 @@ export default function App() {
     }
   });
 
+  useEffect(() => {
+  let cancelled = false;
+
+  const loadSharedIncidents = async () => {
+    if (!isSupabaseConfigured) {
+      return;
+    }
+
+    try {
+      const sharedIncidents = await fetchSharedIncidents();
+
+      if (cancelled || !Array.isArray(sharedIncidents)) return;
+
+      setIncidents(sharedIncidents);
+      localStorage.setItem(
+        "f1012-incidents",
+        JSON.stringify(sharedIncidents)
+      );
+    } catch (error) {
+      console.error("No se han podido cargar incidencias de Supabase:", error);
+    }
+  };
+
+  loadSharedIncidents();
+
+  return () => {
+    cancelled = true;
+  };
+}, []);
+
   const [incidentForm, setIncidentForm] = useState({
     codigoEtiqueta: "",
     numeroFabricacion: "",
@@ -1060,6 +1120,7 @@ export default function App() {
       }
     };
 
+  
     loadSharedRecords();
 
     return () => {
