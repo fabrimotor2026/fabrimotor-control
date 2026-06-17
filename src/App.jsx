@@ -3518,6 +3518,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                 Informar pieza NO OK
                 </h2>
                 
+                
                 <button
                  onClick={() => setShowIncidentModal(false)}
                  className="rounded-xl bg-slate-100 px-3 py-2 font-bold text-slate-700"
@@ -3999,6 +4000,14 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                 </p>
               </div>
               
+              <div className="flex gap-2">
+                <button
+                  onClick={() => window.print()}
+                  className="rounded-xl bg-green-600 px-3 py-2 font-bold text-white"
+               >
+                Exportar PDF
+              </button>
+
               <button
                 onClick={() => {
                   setShow8DModal(false);
@@ -4008,6 +4017,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
               >
                 Cerrar
               </button>
+             </div>
             </div>
             
             <div className="grid gap-4">
