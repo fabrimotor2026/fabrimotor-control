@@ -1642,7 +1642,9 @@ ${error?.message || String(error)}`);
     
     const nextIncidents = [newIncident, ...incidents];
     setIncidents(nextIncidents);
-    localStorage.setItem("f1012-incidents", JSON.stringify(nextIncidents));
+      localStorage.setItem("f1012-incidents", 
+      JSON.stringify(nextIncidents)
+    );
     
     upsertSharedIncident(newIncident).catch((error) => {
       console.error("Error guardando incidencia en Supabase:", error);
@@ -1650,7 +1652,6 @@ ${error?.message || String(error)}`);
         `La incidencia se ha guardado en este dispositivo, pero NO se ha podido sincronizar con la base compartida.\n\n${error?.message || String(error)}`
       );
     });
-    
     setIncidentForm({
       numeroPieza: "",
       tipoFallo: "Mecanizado",
@@ -1667,7 +1668,32 @@ ${error?.message || String(error)}`);
     setShowIncidentModal(false);
   };
   
-  const saveRecord = () => {
+      const saveIncidentsUpdate = (
+        nextIncidents,
+        updatedIncident
+      ) => {
+        setIncidents(nextIncidents);
+        
+        localStorage.setItem(
+          "f1012-incidents",
+          JSON.stringify(nextIncidents)
+        );
+        
+        if (updatedIncident) {
+          upsertSharedIncident(updatedIncident).catch((error) => {
+            console.error(error);
+            
+            alert(
+              `Error sincronizando incidencia:\n\n${
+                error?.message || String(error)
+              }`
+            );
+          }
+        );
+      }
+    };
+    
+    const saveRecord = () => {
     try {
 
     if (!isVerificationUser(currentUser)) {
@@ -3842,11 +3868,14 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                           : item
                       );
 
-                      setIncidents(nextIncidents);
-                      localStorage.setItem(
-                        "f1012-incidents",
-                        JSON.stringify(nextIncidents)
-                      );
+                      const updatedIncident = nextIncidents.find(
+  (item) => item.id === incident.id
+);
+
+saveIncidentsUpdate(
+  nextIncidents,
+  updatedIncident
+);
                     }}
                   />
                   <div className="mt-3 grid gap-3 md:grid-cols-2">
@@ -3868,11 +3897,14 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                               : item
                           );
                           
-                          setIncidents(nextIncidents);
-                          localStorage.setItem(
-                            "f1012-incidents",
-                            JSON.stringify(nextIncidents)
-                          );
+                          const updatedIncident = nextIncidents.find(
+  (item) => item.id === incident.id
+);
+
+saveIncidentsUpdate(
+  nextIncidents,
+  updatedIncident
+);
                         }}
                       >
                         <option>Pendiente Calidad</option>
@@ -3899,11 +3931,14 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                               : item
                           );
                           
-                          setIncidents(nextIncidents);
-                          localStorage.setItem(
-                            "f1012-incidents",
-                            JSON.stringify(nextIncidents)
-                          );
+                          const updatedIncident = nextIncidents.find(
+  (item) => item.id === incident.id
+);
+
+saveIncidentsUpdate(
+  nextIncidents,
+  updatedIncident
+);
                         }}
                       >
                         <option>Pendiente Calidad</option>
@@ -3934,11 +3969,14 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                           : item
                       );
                       
-                      setIncidents(nextIncidents);
-                      localStorage.setItem(
-                        "f1012-incidents",
-                        JSON.stringify(nextIncidents)
-                      );
+                      const updatedIncident = nextIncidents.find(
+  (item) => item.id === incident.id
+);
+
+saveIncidentsUpdate(
+  nextIncidents,
+  updatedIncident
+);
                     }}
                   />
                 </Field>  
@@ -3967,11 +4005,14 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                             : item
                         );
                         
-                        setIncidents(nextIncidents);
-                        localStorage.setItem(
-                          "f1012-incidents",
-                          JSON.stringify(nextIncidents)
-                        );
+                        const updatedIncident = nextIncidents.find(
+  (item) => item.id === incident.id
+);
+
+saveIncidentsUpdate(
+  nextIncidents,
+  updatedIncident
+);
                       }}
                     />
                   </Field>
@@ -3987,11 +4028,14 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                             : item
                         );
                         
-                        setIncidents(nextIncidents);
-                        localStorage.setItem(
-                          "f1012-incidents",
-                          JSON.stringify(nextIncidents)
-                        );
+                        const updatedIncident = nextIncidents.find(
+  (item) => item.id === incident.id
+);
+
+saveIncidentsUpdate(
+  nextIncidents,
+  updatedIncident
+);
                       }}
                     />
                   </Field>
@@ -4008,11 +4052,14 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                             : item
                         );
                         
-                        setIncidents(nextIncidents);
-                        localStorage.setItem(
-                          "f1012-incidents",
-                          JSON.stringify(nextIncidents)
-                        );
+                        const updatedIncident = nextIncidents.find(
+  (item) => item.id === incident.id
+);
+
+saveIncidentsUpdate(
+  nextIncidents,
+  updatedIncident
+);
                       }}
                     />
                   </Field>
@@ -4028,11 +4075,14 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                             : item
                           );
                           
-                          setIncidents(nextIncidents);
-                          localStorage.setItem(
-                            "f1012-incidents",
-                            JSON.stringify(nextIncidents)
-                          );
+                          const updatedIncident = nextIncidents.find(
+  (item) => item.id === incident.id
+);
+
+saveIncidentsUpdate(
+  nextIncidents,
+  updatedIncident
+);
                         }}
                       >
                         <option>Abierta</option>
@@ -4052,11 +4102,14 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                               : item
                           );
                           
-                          setIncidents(nextIncidents);
-                          localStorage.setItem(
-                            "f1012-incidents",
-                            JSON.stringify(nextIncidents)
-                          );
+                          const updatedIncident = nextIncidents.find(
+  (item) => item.id === incident.id
+);
+
+saveIncidentsUpdate(
+  nextIncidents,
+  updatedIncident
+);
                         }}
                       />
                     </Field>
@@ -4328,102 +4381,9 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                   <div><strong>Coste total:</strong> {Number(selected8D.costeTotal || 0).toFixed(2)} €</div>
                 </div>
               </div>
-              
-              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-                <h3 className="mb-2 font-black text-amber-900">D4 · Análisis causa raíz</h3>
-                <textarea
-                  className="input min-h-[90px]"
-                  value={selected8D.causaRaiz || ""}
-                  onChange={(e) => {
-                    const nextIncidents = incidents.map((item) =>
-                      item.id === selected8D.id
-                        ? { ...item, causaRaiz: e.target.value }
-                        : item
-                      );
-                      
-                      setIncidents(nextIncidents);
-                      localStorage.setItem("f1012-incidents", JSON.stringify(nextIncidents));
-                      setSelected8D({ ...selected8D, causaRaiz: e.target.value });
-                    }}
-                    placeholder="Describe la causa raíz..."
-                  />
-                </div>
-                
-                <div className="rounded-2xl border border-slate-200 bg-white p-4">
-                  <h3 className="mb-2 font-black text-slate-900">D5 · Acción correctiva</h3>
-                  <div className="grid gap-2 text-sm text-slate-700 md:grid-cols-2">
-                    <div><strong>Nº Acción:</strong> {selected8D.accionCorrectiva || "-"}</div>
-                    <div><strong>Responsable:</strong> {selected8D.responsableAccion || "-"}</div>
-                    <div><strong>Fecha compromiso:</strong> {selected8D.fechaCompromiso || "-"}</div>            
-                    <div><strong>Estado:</strong> {selected8D.estadoAccion || "-"}</div>
-                  </div>
-                  <div className="mt-3 rounded-xl bg-slate-50 p-3 text-sm">
-                    <strong>Descripción acción:</strong> {selected8D.accionDescripcion || "-"}
-                  </div>
-                </div>
-                
-                <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
-                  <h3 className="mb-2 font-black text-blue-900">D6 · Verificación eficacia</h3>
-                  <textarea
-                    className="input min-h-[90px]"
-                    value={selected8D.verificacionEficacia || ""}
-                    onChange={(e) => {
-                      const nextIncidents = incidents.map((item) =>
-                        item.id === selected8D.id
-                          ? { ...item, verificacionEficacia: e.target.value }
-                          : item
-                      );
-                      
-                      setIncidents(nextIncidents);
-                      localStorage.setItem("f1012-incidents", JSON.stringify(nextIncidents));
-                      setSelected8D({ ...selected8D, verificacionEficacia: e.target.value });
-                    }}
-                    placeholder="Describe cómo se verifica la eficacia..."
-                  />
-                </div>
-                
-                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-                  <h3 className="mb-2 font-black text-emerald-900">D7 · Estandarización</h3>
-                  <textarea
-                    className="input min-h-[90px]"
-                    value={selected8D.estandarizacion || ""}
-                    onChange={(e) => {
-                      const nextIncidents = incidents.map((item) =>
-                        item.id === selected8D.id
-                          ? { ...item, estandarizacion: e.target.value }
-                          : item
-                      );
-                      
-                      setIncidents(nextIncidents);
-                      localStorage.setItem("f1012-incidents", JSON.stringify(nextIncidents));
-                      setSelected8D({ ...selected8D, estandarizacion: e.target.value });
-                    }}
-                    placeholder="Describe cambios en instrucciones, formación, controles..."
-                  />
-                </div>
-                
-                <div className="rounded-2xl border border-slate-300 bg-slate-100 p-4">
-                  <h3 className="mb-2 font-black text-slate-900">D8 · Cierre</h3>
-                  <textarea
-                    className="input min-h-[90px]"
-                    value={selected8D.cierre8D || ""}
-                    onChange={(e) => {
-                      const nextIncidents = incidents.map((item) =>
-                        item.id === selected8D.id
-                          ? { ...item, cierre8D: e.target.value }
-                          : item
-                      );
-                      
-                      setIncidents(nextIncidents);
-                      localStorage.setItem("f1012-incidents", JSON.stringify(nextIncidents));
-                      setSelected8D({ ...selected8D, cierre8D: e.target.value });
-                    }}
-                    placeholder="Observaciones de cierre..."
-                  />
-                </div>
-              </div>
-            </div>          
+            </div>
           </div>
+        </div>
         )}
 
       {showRejectsModal && (
