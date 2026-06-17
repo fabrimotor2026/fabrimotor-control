@@ -944,6 +944,8 @@ export default function App() {
 
   const [showIncidentModal, setShowIncidentModal] = useState(false);
   const [showIncidentsListModal, setShowIncidentsListModal] = useState(false);
+  const [show8DModal, setShow8DModal] = useState(false);
+  const [selected8D, setSelected8D] = useState(null);
 
   const [incidents,setIncidents] = useState(() => {
     try {
@@ -1566,6 +1568,10 @@ ${error?.message || String(error)}`);
       estadoCalidad: "Pendiente",
       pesoKg: incidentForm.pesoKg,
       costeKg: incidentForm.costeKg,
+      accionCorrectiva: "",
+      responsableAccion: "",
+      fechaCompromiso: "",
+      estadoAccion: "Abierta",
       costeTotal:
       Number(incidentForm.pesoKg || 0) *
       Number(incidentForm.costeKg || 0) *
@@ -3834,10 +3840,137 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                     readOnly
                   />
                 </Field>
+
+                <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3">
+                  <div className="mb-3 font-black text-amber-900">
+                    Acción Correctiva
+                  </div>
+                  
+                  <Field label="Nº Acción Correctiva">
+                    <input
+                      className="input"
+                      value={incident.accionCorrectiva || ""}
+                      onChange={(e) => {
+                        const nextIncidents = incidents.map((item) =>
+                          item.id === incident.id
+                            ? { ...item, accionCorrectiva: e.target.value }
+                            : item
+                        );
+                        
+                        setIncidents(nextIncidents);
+                        localStorage.setItem(
+                          "f1012-incidents",
+                          JSON.stringify(nextIncidents)
+                        );
+                      }}
+                    />
+                  </Field>
+                  
+                  <Field label="Responsable">
+                    <input
+                      className="input"
+                      value={incident.responsableAccion || ""}
+                      onChange={(e) => {
+                        const nextIncidents = incidents.map((item) =>
+                          item.id === incident.id
+                            ? { ...item, responsableAccion: e.target.value }
+                            : item
+                        );
+                        
+                        setIncidents(nextIncidents);
+                        localStorage.setItem(
+                          "f1012-incidents",
+                          JSON.stringify(nextIncidents)
+                        );
+                      }}
+                    />
+                  </Field>
+                  
+                  <Field label="Fecha compromiso">
+                    <input
+                      type="date"
+                      className="input"
+                      value={incident.fechaCompromiso || ""}
+                      onChange={(e) => {
+                        const nextIncidents = incidents.map((item) =>
+                          item.id === incident.id
+                            ? { ...item, fechaCompromiso: e.target.value }
+                            : item
+                        );
+                        
+                        setIncidents(nextIncidents);
+                        localStorage.setItem(
+                          "f1012-incidents",
+                          JSON.stringify(nextIncidents)
+                        );
+                      }}
+                    />
+                  </Field>
+                  
+                  <Field label="Estado">
+                    <select
+                      className="input"
+                      value={incident.estadoAccion || "Abierta"}
+                      onChange={(e) => {
+                        const nextIncidents = incidents.map((item) =>
+                          item.id === incident.id
+                            ? { ...item, estadoAccion: e.target.value }
+                            : item
+                          );
+                          
+                          setIncidents(nextIncidents);
+                          localStorage.setItem(
+                            "f1012-incidents",
+                            JSON.stringify(nextIncidents)
+                          );
+                        }}
+                      >
+                        <option>Abierta</option>
+                        <option>En curso</option>
+                        <option>Cerrada</option>
+                      </select>
+                    </Field>
+                    
+                    <Field label="Descripción acción correctiva">                
+                      <textarea
+                        className="input min-h-[80px]"
+                        value={incident.accionDescripcion || ""}
+                        onChange={(e) => {
+                          const nextIncidents = incidents.map((item) =>
+                            item.id === incident.id
+                              ? { ...item, accionDescripcion: e.target.value }
+                              : item
+                          );
+                          
+                          setIncidents(nextIncidents);
+                          localStorage.setItem(
+                            "f1012-incidents",
+                            JSON.stringify(nextIncidents)
+                          );
+                        }}
+                      />
+                    </Field>
+                    
+                  </div>
+
+
                 
               </div>
               
               </div>
+              )}
+              
+              {!isOperatorView && (
+                <Button
+                  size="sm"
+                  className="mt-3 rounded-2xl bg-indigo-600 text-white"
+                  onClick={() => {
+                    setSelected8D(incident);
+                    setShow8DModal(true);
+                  }}
+                >
+                  Informe 8D
+                </Button>
               )}
 
               {incident.revisadoPor && (
@@ -3852,6 +3985,164 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
     </div>
   </div>
 )}
+
+      {show8DModal && selected8D && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="max-h-[90vh] w-full max-w-5xl overflow-auto rounded-3xl bg-white p-6 shadow-2xl">
+            <div className="mb-5 flex items-center justify-between gap-4">
+              <div>
+                <h2 className="text-2xl font-black text-slate-900">
+                  Informe 8D simplificado
+                </h2>
+                <p className="text-sm text-slate-500">
+                  Código etiqueta: {selected8D.codigoEtiqueta || selected8D.numeroPieza || "-"}
+                </p>
+              </div>
+              
+              <button
+                onClick={() => {
+                  setShow8DModal(false);
+                  setSelected8D(null);
+                }}
+                className="rounded-xl bg-slate-100 px-3 py-2 font-bold text-slate-700"
+              >
+                Cerrar
+              </button>
+            </div>
+            
+            <div className="grid gap-4">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <h3 className="mb-2 font-black text-slate-900">D1 · Equipo</h3>
+                <div className="grid gap-2 text-sm text-slate-700 md:grid-cols-2">
+                  <div><strong>Responsable:</strong> {selected8D.responsableAccion || "-"}</div>
+                  <div><strong>Fecha:</strong> {selected8D.fecha || "-"}</div>
+                  <div><strong>Revisado por:</strong> {selected8D.revisadoPor || "-"}</div>
+                  <div><strong>Fecha revisión:</strong> {selected8D.fechaRevision || "-"}</div>
+                </div>
+              </div>
+              
+              <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                <h3 className="mb-2 font-black text-slate-900">D2 · Descripción del problema</h3>
+                <div className="grid gap-2 text-sm text-slate-700 md:grid-cols-2">
+                  <div><strong>Código etiqueta:</strong> {selected8D.codigoEtiqueta || selected8D.numeroPieza || "-"}</div>
+                  <div><strong>Nº fabricación:</strong> {selected8D.numeroFabricacion || "-"}</div>
+                  <div><strong>Nº colada:</strong> {selected8D.numeroColada || "-"}</div>
+                  <div><strong>Tipo fallo:</strong> {selected8D.tipoFallo || "-"}</div>
+                  <div><strong>Máquina:</strong> {selected8D.maquina || "-"}</div>
+                  <div><strong>Operario:</strong> {selected8D.operario || "-"}</div>
+                </div>
+                <div className="mt-3 rounded-xl bg-slate-50 p-3 text-sm">
+                  <strong>Descripción:</strong> {selected8D.descripcion || "-"}
+                </div>
+              </div>
+              
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <h3 className="mb-2 font-black text-slate-900">D3 · Acción inmediata</h3>
+                <div className="grid gap-2 text-sm text-slate-700 md:grid-cols-2">
+                  <div><strong>Recuperable:</strong> {selected8D.recuperable || "-"}</div>
+                  <div><strong>Chatarra:</strong> {selected8D.chatarra || "-"}</div>
+                  <div><strong>Piezas afectadas:</strong> {selected8D.piezasAfectadas || "-"}</div>
+                  <div><strong>Coste total:</strong> {Number(selected8D.costeTotal || 0).toFixed(2)} €</div>
+                </div>
+              </div>
+              
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                <h3 className="mb-2 font-black text-amber-900">D4 · Análisis causa raíz</h3>
+                <textarea
+                  className="input min-h-[90px]"
+                  value={selected8D.causaRaiz || ""}
+                  onChange={(e) => {
+                    const nextIncidents = incidents.map((item) =>
+                      item.id === selected8D.id
+                        ? { ...item, causaRaiz: e.target.value }
+                        : item
+                      );
+                      
+                      setIncidents(nextIncidents);
+                      localStorage.setItem("f1012-incidents", JSON.stringify(nextIncidents));
+                      setSelected8D({ ...selected8D, causaRaiz: e.target.value });
+                    }}
+                    placeholder="Describe la causa raíz..."
+                  />
+                </div>
+                
+                <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                  <h3 className="mb-2 font-black text-slate-900">D5 · Acción correctiva</h3>
+                  <div className="grid gap-2 text-sm text-slate-700 md:grid-cols-2">
+                    <div><strong>Nº Acción:</strong> {selected8D.accionCorrectiva || "-"}</div>
+                    <div><strong>Responsable:</strong> {selected8D.responsableAccion || "-"}</div>
+                    <div><strong>Fecha compromiso:</strong> {selected8D.fechaCompromiso || "-"}</div>            
+                    <div><strong>Estado:</strong> {selected8D.estadoAccion || "-"}</div>
+                  </div>
+                  <div className="mt-3 rounded-xl bg-slate-50 p-3 text-sm">
+                    <strong>Descripción acción:</strong> {selected8D.accionDescripcion || "-"}
+                  </div>
+                </div>
+                
+                <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
+                  <h3 className="mb-2 font-black text-blue-900">D6 · Verificación eficacia</h3>
+                  <textarea
+                    className="input min-h-[90px]"
+                    value={selected8D.verificacionEficacia || ""}
+                    onChange={(e) => {
+                      const nextIncidents = incidents.map((item) =>
+                        item.id === selected8D.id
+                          ? { ...item, verificacionEficacia: e.target.value }
+                          : item
+                      );
+                      
+                      setIncidents(nextIncidents);
+                      localStorage.setItem("f1012-incidents", JSON.stringify(nextIncidents));
+                      setSelected8D({ ...selected8D, verificacionEficacia: e.target.value });
+                    }}
+                    placeholder="Describe cómo se verifica la eficacia..."
+                  />
+                </div>
+                
+                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                  <h3 className="mb-2 font-black text-emerald-900">D7 · Estandarización</h3>
+                  <textarea
+                    className="input min-h-[90px]"
+                    value={selected8D.estandarizacion || ""}
+                    onChange={(e) => {
+                      const nextIncidents = incidents.map((item) =>
+                        item.id === selected8D.id
+                          ? { ...item, estandarizacion: e.target.value }
+                          : item
+                      );
+                      
+                      setIncidents(nextIncidents);
+                      localStorage.setItem("f1012-incidents", JSON.stringify(nextIncidents));
+                      setSelected8D({ ...selected8D, estandarizacion: e.target.value });
+                    }}
+                    placeholder="Describe cambios en instrucciones, formación, controles..."
+                  />
+                </div>
+                
+                <div className="rounded-2xl border border-slate-300 bg-slate-100 p-4">
+                  <h3 className="mb-2 font-black text-slate-900">D8 · Cierre</h3>
+                  <textarea
+                    className="input min-h-[90px]"
+                    value={selected8D.cierre8D || ""}
+                    onChange={(e) => {
+                      const nextIncidents = incidents.map((item) =>
+                        item.id === selected8D.id
+                          ? { ...item, cierre8D: e.target.value }
+                          : item
+                      );
+                      
+                      setIncidents(nextIncidents);
+                      localStorage.setItem("f1012-incidents", JSON.stringify(nextIncidents));
+                      setSelected8D({ ...selected8D, cierre8D: e.target.value });
+                    }}
+                    placeholder="Observaciones de cierre..."
+                  />
+                </div>
+              </div>
+            </div>          
+          </div>
+        )}
+
       {showRejectsModal && (
         <RejectsModalComponent
           records={rejectedRecords}
@@ -4386,7 +4677,9 @@ function RejectsModal({ records, getRejectedChecks, buildSheetName, onClose }) {
   const [rejectPieza, setRejectPieza] = useState("");
   const [rejectMaquina, setRejectMaquina] = useState("");
   const [showIncidentsListModal, setShowIncidentsListModal] = useState(false);
-
+  const [show8DModal, setShow8DModal] = useState(false);
+  const [selected8D, setSelected8D] = useState(null);
+  
   const filteredRejects = records.filter((record) => {
     const matchFrom = !rejectDateFrom || record.fecha >= rejectDateFrom;
     const matchTo = !rejectDateTo || record.fecha <= rejectDateTo;
