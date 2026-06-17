@@ -4002,9 +4002,171 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
               
               <div className="flex gap-2">
                 <button
-                  onClick={() => window.print()}
-                  className="rounded-xl bg-green-600 px-3 py-2 font-bold text-white"
-               >
+                  onClick={() => {
+                    const printWindow = window.open("", "_blank");
+                    
+                    printWindow.document.write(`
+                      <html>
+                        <head>
+                          <title>Informe 8D</title>
+                          <style>
+                            body {
+                              font-family: Arial, sans-serif;
+                              padding: 24px;
+                              color: #111827;
+                            }
+                              
+                            h1 {
+                              margin: 0 0 6px 0;
+                              font-size: 26px;
+                              color: #0f172a;
+                            }
+                              
+                            h2 {
+                              margin: 0 0 8px 0;
+                              font-size: 18px;
+                              color: #1f2937;
+                            }
+                              
+                            .header {
+                              border-bottom: 3px solid #1f6f73;
+                              padding-bottom: 12px;
+                              margin-bottom: 18px;
+                            }
+                              
+                            .subtitle {
+                              font-size: 13px;
+                              color: #475569;
+                            }
+                              
+                            .section {
+                              border: 1px solid #cbd5e1;
+                              border-radius: 10px;
+                              padding: 12px;
+                              margin-bottom: 12px;
+                            }
+                              
+                            .grid {
+                              display: grid;
+                              grid-template-columns: 1fr 1fr;
+                              gap: 8px 18px;
+                              font-size: 13px;
+                            }
+                              
+                            .text {
+                              font-size: 13px;
+                              background: #f8fafc;
+                              padding: 10px;
+                              border-radius: 8px;
+                              margin-top: 8px;
+                              white-space: pre-wrap;
+                            }
+                              
+                            .footer {
+                              margin-top: 24px;
+                              font-size: 11px;
+                              color: #64748b;
+                              border-top: 1px solid #cbd5e1;
+                              padding-top: 8px;
+                            }
+                              
+                            @media print {
+                              button {
+                                display: none;
+                              }
+                            }
+                          </style>
+                        </head>
+                        
+                        <body>
+                          <div class="header">
+                          <h1>Informe 8D simplificado</h1>
+                          <div class="subtitle">
+                            Código etiqueta: ${selected8D.codigoEtiqueta || selected8D.numeroPieza || "-"}
+                          </div>
+                        </div>
+                        
+                        <div class="section">
+                          <h2>D1 · Equipo</h2>
+                          <div class="grid">
+                            <div><strong>Responsable:</strong> ${selected8D.responsableAccion || "-"}</div>
+                            <div><strong>Fecha:</strong> ${selected8D.fecha || "-"}</div>
+                            <div><strong>Revisado por:</strong> ${selected8D.revisadoPor || "-"}</div>
+                            <div><strong>Fecha revisión:</strong> ${selected8D.fechaRevision || "-"}</div>
+                          </div>
+                        </div>
+                        
+                        <div class="section">
+                          <h2>D2 · Descripción del problema</h2>
+                          <div class="grid">
+                            <div><strong>Código etiqueta:</strong> ${selected8D.codigoEtiqueta || selected8D.numeroPieza || "-"}</div>
+                            <div><strong>Nº fabricación:</strong> ${selected8D.numeroFabricacion || "-"}</div>
+                            <div><strong>Nº colada:</strong> ${selected8D.numeroColada || "-"}</div>
+                            <div><strong>Tipo fallo:</strong> ${selected8D.tipoFallo || "-"}</div>
+                            <div><strong>Máquina:</strong> ${selected8D.maquina || "-"}</div>
+                            <div><strong>Operario:</strong> ${selected8D.operario || "-"}</div>
+                          </div>
+                          <div class="text"><strong>Descripción:</strong><br>${selected8D.descripcion || "-"}</div>
+                        </div>
+                        
+                        <div class="section">
+                          <h2>D3 · Acción inmediata</h2>
+                          <div class="grid">
+                            <div><strong>Recuperable:</strong> ${selected8D.recuperable || "-"}</div>
+                            <div><strong>Chatarra:</strong> ${selected8D.chatarra || "-"}</div>
+                            <div><strong>Piezas afectadas:</strong> ${selected8D.piezasAfectadas || "-"}</div>
+                            <div><strong>Coste total:</strong> ${Number(selected8D.costeTotal || 0).toFixed(2)} €</div>
+                          </div>
+                        </div>
+                        
+                        <div class="section">
+                          <h2>D4 · Análisis causa raíz</h2>
+                          <div class="text">${selected8D.causaRaiz || "-"}</div>
+                        </div>
+                        
+                        <div class="section">
+                          <h2>D5 · Acción correctiva</h2>
+                           <div class="grid">
+                            <div><strong>Nº Acción:</strong> ${selected8D.accionCorrectiva || "-"}</div>
+                            <div><strong>Responsable:</strong> ${selected8D.responsableAccion || "-"}</div>
+                            <div><strong>Fecha compromiso:</strong> ${selected8D.fechaCompromiso || "-"}</div>
+                            <div><strong>Estado:</strong> ${selected8D.estadoAccion || "-"}</div>
+                          </div>
+                          <div class="text"><strong>Descripción acción:</strong><br>${selected8D.accionDescripcion || "-"}</div>
+                        </div>
+                        
+                        <div class="section">
+                          <h2>D6 · Verificación eficacia</h2>
+                          <div class="text">${selected8D.verificacionEficacia || "-"}</div>
+                        </div>
+                        
+                        <div class="section">
+                          <h2>D7 · Estandarización</h2>
+                          <div class="text">${selected8D.estandarizacion || "-"}</div>
+                        </div>
+                        
+                        <div class="section">
+                          <h2>D8 · Cierre</h2>
+                          <div class="text">${selected8D.cierre8D || "-"}</div>
+                        </div>
+                        
+                        <div class="footer">
+                          FABRIMOTOR · Informe generado desde control digital F-1012 · ${new Date().toLocaleString("es-ES")}
+                        </div>
+                        
+                        <script>
+                          window.onload = function() {
+                            window.print();
+                          };
+                        </script>
+                      </body>
+                    </html>
+                  `);
+                  
+                  printWindow.document.close();
+                }}
+                className="rounded-xl bg-green-600 px-3 py-2 font-bold text-white"
+              >
                 Exportar PDF
               </button>
 
@@ -4018,6 +4180,8 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                 Cerrar
               </button>
              </div>
+             
+             
             </div>
             
             <div className="grid gap-4">
