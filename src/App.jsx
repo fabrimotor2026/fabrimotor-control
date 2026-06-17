@@ -1644,6 +1644,13 @@ ${error?.message || String(error)}`);
     setIncidents(nextIncidents);
     localStorage.setItem("f1012-incidents", JSON.stringify(nextIncidents));
     
+    upsertSharedIncident(newIncident).catch((error) => {
+      console.error("Error guardando incidencia en Supabase:", error);
+      alert(
+        `La incidencia se ha guardado en este dispositivo, pero NO se ha podido sincronizar con la base compartida.\n\n${error?.message || String(error)}`
+      );
+    });
+    
     setIncidentForm({
       numeroPieza: "",
       tipoFallo: "Mecanizado",
