@@ -2042,10 +2042,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
     const piece = startupPiece.trim();
     const of = startupOF.trim();
 
-    if (!piece) {
-      alert("Debe introducir el número de pieza.");
-      return;
-    }
+    
 
     localStorage.setItem("startupReference", selectedReferenceData.id);
     localStorage.setItem("startupPiece", piece);
@@ -2378,18 +2375,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
               </select>
             </label>
 
-            <label className="mb-3 block">
-              <span className="mb-1.5 block text-sm font-bold text-slate-700">
-                Número de pieza
-              </span>
-              <input
-                autoFocus
-                className="input"
-                value={startupPiece}
-                onChange={(event) => setStartupPiece(event.target.value)}
-                placeholder="Ejemplo: 123456"
-              />
-            </label>
+            
 
             <label className="mb-5 block">
               <span className="mb-1.5 block text-sm font-bold text-slate-700">
@@ -2691,12 +2677,28 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                   />
                 </Field>
 
+                
                 <Field label="Operario">
                   <input
                     className="input bg-slate-100 font-semibold text-slate-700"
                     value={form.operario}
                     placeholder={currentUser ? `${currentUser.username} - ${currentUser.name.trim()}` : "Operario"}
                     readOnly
+                  />
+                </Field>
+
+                                
+                <Field label="Número de pieza">
+                  <input
+                    className="input text-base font-bold text-slate-900"
+                    value={form.numeroPieza}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        numeroPieza: e.target.value,
+                      })
+                    }
+                    placeholder="Introduce número de pieza"
                   />
                 </Field>
 
@@ -5625,13 +5627,7 @@ function EditRecordModal({
               />
             </Field>
 
-            <Field label="Número de pieza">
-              <input
-                className="input"
-                value={editForm.numeroPieza}
-                onChange={(e) => setEditForm({ ...editForm, numeroPieza: e.target.value })}
-              />
-            </Field>
+            
 
             {editForm.maquina === "Torno Hyundai" && (
               <Field label="Control Ecoroll / Refrigerante">
