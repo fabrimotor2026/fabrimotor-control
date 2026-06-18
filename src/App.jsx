@@ -977,21 +977,19 @@ export default function App() {
   const [show8DModal, setShow8DModal] = useState(false);
   const [selected8D, setSelected8D] = useState(null);
 
-  const [incidents,setIncidents] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem("f1012-incidents") || "[]");
-    } catch {
-      return [];
-    }
-  });
+  const [incidents, setIncidents] = useState(() => {
+  try {
+    return JSON.parse(localStorage.getItem("f1012-incidents") || "[]");
+  } catch {
+    return [];
+  }
+});
 
-  useEffect(() => {
+useEffect(() => {
   let cancelled = false;
 
   const loadSharedIncidents = async () => {
-    if (!isSupabaseConfigured) {
-      return;
-    }
+    if (!isSupabaseConfigured || !supabase) return;
 
     try {
       const sharedIncidents = await fetchSharedIncidents();
@@ -1012,6 +1010,49 @@ export default function App() {
 
   return () => {
     cancelled = true;
+  };
+}, []);
+
+useEffect(() => {
+  if (!isSupabaseConfigured || !supabase) return;
+
+  const channel = supabase
+    .channel("fabr_motor_incidents_realtime")
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "fabr_motor_incidents",
+      },
+      async () => {
+        console.log("CAMBIO DETECTADO EN INCIDENTES");
+
+        try {
+          const sharedIncidents = await fetchSharedIncidents();
+
+          if (Array.isArray(sharedIncidents)) {
+            setIncidents(sharedIncidents);
+            localStorage.setItem(
+              "f1012-incidents",
+              JSON.stringify(sharedIncidents)
+            );
+          }
+        } catch (error) {
+          console.error("Error actualizando incidencias en tiempo real:", error);
+        }
+      }
+    )
+    .subscribe((status, error) => {
+      console.log("Realtime incidents status:", status);
+
+      if (error) {
+        console.error("Realtime incidents error:", error);
+      }
+    });
+
+  return () => {
+    supabase.removeChannel(channel);
   };
 }, []);
 
