@@ -1056,6 +1056,51 @@ useEffect(() => {
   };
 }, []);
 
+useEffect(() => {
+  if (!isSupabaseConfigured || !supabase) return;
+
+  const channel = supabase
+    .channel("fabrimotor_records_realtime")
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "fabrimotor_records",
+      },
+      async () => {
+        console.log("CAMBIO DETECTADO EN REGISTROS");
+
+        try {
+          const sharedRecords = await fetchSharedRecords();
+
+          if (Array.isArray(sharedRecords)) {
+            setRecords(sharedRecords);
+            localStorage.setItem(
+              "f1012-zona-b",
+              JSON.stringify(sharedRecords)
+            );
+          }
+        } catch (error) {
+          console.error("Error actualizando registros en tiempo real:", error);
+        }
+      }
+    )
+    .subscribe((status, error) => {
+      console.log("Realtime records status:", status);
+
+      if (error) {
+        console.error("Realtime records error:", error);
+      }
+    });
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}, []);
+
+
+
   const [incidentForm, setIncidentForm] = useState({
     codigoEtiqueta: "",
     numeroFabricacion: "",
