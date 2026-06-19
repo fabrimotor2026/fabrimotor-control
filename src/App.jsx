@@ -1693,6 +1693,7 @@ ${error?.message || String(error)}`);
         `La incidencia se ha guardado en este dispositivo, pero NO se ha podido sincronizar con la base compartida.\n\n${error?.message || String(error)}`
       );
     });
+    
     setIncidentForm({
       numeroPieza: "",
       tipoFallo: "Mecanizado",
