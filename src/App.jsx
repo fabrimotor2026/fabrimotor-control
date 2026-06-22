@@ -1724,6 +1724,98 @@ ${error?.message || String(error)}`);
   const saveIncident = () => {
     if (!incidentForm.codigoEtiqueta || !incidentForm.descripcion.trim()) {
       alert("Debe indicar código etiqueta y descripción de la incidencia.");
+  const printBoxLabel = () => {
+    if (totalCaja !== 16) {
+      alert("La suma de piezas debe ser exactamente 16.");
+      return;
+    }
+
+    if (!labelForm.operario1 || labelForm.operario1.length !== 4) {
+      alert("El Operario 1 debe tener exactamente 4 cifras.");
+      return;
+    }
+
+    if (labelForm.operario2 && labelForm.operario2.length !== 4) {
+      alert("El Operario 2 debe tener exactamente 4 cifras.");
+      return;
+    }
+
+    if (!labelForm.numeroCaja || labelForm.numeroCaja.length > 5) {
+      alert("El Nº de caja es obligatorio y debe tener máximo 5 cifras.");
+      return;
+    }
+
+    const printWindow = window.open("", "_blank");
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Etiqueta Caja F-1012</title>
+          <style>
+            body { margin: 0; padding: 20px; font-family: Arial, sans-serif; color: #000; }
+            .label { width: 720px; border: 4px solid #000; padding: 18px; }
+            .top { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 4px solid #000; padding-bottom: 12px; font-size: 46px; font-weight: 900; }
+            .right { text-align: right; }
+            .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-top: 18px; text-align: center; font-size: 34px; font-weight: 900; }
+            .cell { border: 2px solid #000; padding: 8px; min-height: 42px; }
+            .total { margin-top: 18px; border-top: 4px solid #000; border-bottom: 4px solid #000; padding: 12px; text-align: center; font-size: 38px; font-weight: 900; }
+            .line { margin-top: 18px; font-size: 30px; font-weight: 900; }
+            .week { margin-top: 18px; display: grid; grid-template-columns: 1fr 1fr; text-align: center; font-size: 30px; font-weight: 900; }
+            .box { margin-top: 18px; display: grid; grid-template-columns: 1fr 1fr; border-top: 4px solid #000; border-bottom: 4px solid #000; padding: 12px; font-size: 40px; font-weight: 900; }
+            .thread { margin-top: 24px; text-align: center; font-size: 46px; font-weight: 900; }
+            @media print { body { padding: 0; } }
+          </style>
+        </head>
+        <body>
+          <div class="label">
+            <div class="top">
+              <div>F-1012</div>
+              <div class="right">1025980</div>
+            </div>
+
+            <div class="grid">
+              <div>FAB.</div><div>COL.</div><div>CANT.</div>
+              <div class="cell">${labelForm.fab1 || ""}</div>
+              <div class="cell">${labelForm.col1 || ""}</div>
+              <div class="cell">${labelForm.cant1 || ""}</div>
+
+              <div>FAB.</div><div>COL.</div><div>CANT.</div>
+              <div class="cell">${labelForm.fab2 || ""}</div>
+              <div class="cell">${labelForm.col2 || ""}</div>
+              <div class="cell">${labelForm.cant2 || ""}</div>
+            </div>
+
+            <div class="total">Nº DE PIEZAS TOTAL: ${totalCaja}</div>
+
+            <div class="line">
+              Nº OPERARIO: ${labelForm.operario1 || ""}
+              ${labelForm.operario2 ? " / " + labelForm.operario2 : ""}
+            </div>
+
+            <div class="week">
+              <div>SEMANA: ${numeroSemana}</div>
+              <div>DIA: ${numeroDia}</div>
+            </div>
+
+            <div class="box">
+              <div>FB-26</div>
+              <div class="right">${labelForm.numeroCaja || ""}</div>
+            </div>
+
+            <div class="thread">ROSCA DERECHA</div>
+          </div>
+
+          <script>
+           window.onload = function() {
+             window.print();
+           };
+         </script>
+        </body>
+      </html>
+    `);
+
+    printWindow.document.close();
+  };
       return;
     }
 
@@ -4854,6 +4946,7 @@ saveIncidentsUpdate(
             ROSCA DERECHA
             </div>
           </div>
+          
           
           <button
             onClick={printBoxLabel}
