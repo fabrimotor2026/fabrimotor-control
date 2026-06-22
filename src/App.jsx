@@ -1720,10 +1720,6 @@ ${error?.message || String(error)}`);
       alert(`Usuario eliminado localmente, pero no se ha podido eliminar en Supabase:\n\n${error?.message || String(error)}`);
     }
   };
-  
-  const saveIncident = () => {
-    if (!incidentForm.codigoEtiqueta || !incidentForm.descripcion.trim()) {
-      alert("Debe indicar código etiqueta y descripción de la incidencia.");
   const printBoxLabel = () => {
     if (totalCaja !== 16) {
       alert("La suma de piezas debe ser exactamente 16.");
@@ -1814,7 +1810,10 @@ ${error?.message || String(error)}`);
       </html>
     `);
 
-    printWindow.document.close();
+  const saveIncident = () => {
+    if (!incidentForm.codigoEtiqueta || !incidentForm.descripcion.trim()) {
+      alert("Debe indicar código etiqueta y descripción de la incidencia.");
+      printWindow.document.close();
   };
       return;
     }
