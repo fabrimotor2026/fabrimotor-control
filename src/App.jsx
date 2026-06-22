@@ -705,6 +705,64 @@ async function upsertSharedIncident(incident) {
   if (error) throw error;
 }
 
+async function saveBoxLabelToSupabase(labelData) {
+  if (!isSupabaseConfigured || !supabase) return;
+
+  const rows = [];
+
+  if (
+    labelData.fab1 &&
+    labelData.col1 &&
+    Number(labelData.cant1) > 0
+  ) {
+    rows.push({
+      id: crypto.randomUUID(),
+      label_id: labelData.numeroCaja,
+      fecha: new Date().toISOString().slice(0, 10),
+      semana: labelData.semana,
+      dia: labelData.dia,
+      operario1: labelData.operario1,
+      operario2: labelData.operario2 || "",
+      numero_caja: labelData.numeroCaja,
+      linea: 1,
+      fabricacion: labelData.fab1,
+      colada: labelData.col1,
+      cantidad: Number(labelData.cant1),
+      total_caja: 16,
+      data: labelData,
+    });
+  }
+
+  if (
+    labelData.fab2 &&
+    labelData.col2 &&
+    Number(labelData.cant2) > 0
+  ) {
+    rows.push({
+      id: crypto.randomUUID(),
+      label_id: labelData.numeroCaja,
+      fecha: new Date().toISOString().slice(0, 10),
+      semana: labelData.semana,
+      dia: labelData.dia,
+      operario1: labelData.operario1,
+      operario2: labelData.operario2 || "",
+      numero_caja: labelData.numeroCaja,
+      linea: 2,
+      fabricacion: labelData.fab2,
+      colada: labelData.col2,
+      cantidad: Number(labelData.cant2),
+      total_caja: 16,
+      data: labelData,
+    });
+  }
+
+  const { error } = await supabase
+    .from("f1012_box_labels")
+    .insert(rows);
+
+  if (error) throw error;
+}
+
 function normalizeSharedRole(role) {
   const value = String(role || "").trim();
 
@@ -1741,6 +1799,33 @@ ${error?.message || String(error)}`);
       return;
     }
 
+  const labelData = {
+    fab1: labelForm.fab1,
+    col1: labelForm.col1,
+    cant1: labelForm.cant1,
+
+    fab2: labelForm.fab2,
+    col2: labelForm.col2,
+    cant2: labelForm.cant2,
+
+    operario1: labelForm.operario1,
+    operario2: labelForm.operario2,
+    numeroCaja: `FB26-${labelForm.numeroCaja}`,
+
+    semana: numeroSemana,
+    dia: numeroDia,
+    totalCaja,
+  };
+
+  saveBoxLabelToSupabase(labelData).catch((error) => {
+    console.log("FILAS ETIQUETA A GUARDAR:", rows);
+    console.log("GUARDANDO ETIQUETA:", labelData);
+    console.error("Error guardando etiqueta de caja:", error);
+    alert(
+      `La etiqueta se imprimirá, pero NO se ha podido guardar en el listado de cajas.\n\n${error?.message || String(error)}`
+    );
+  });    
+
     const printWindow = window.open("", "_blank");
 
     printWindow.document.write(`
@@ -1810,11 +1895,13 @@ ${error?.message || String(error)}`);
       </html>
     `);
 
+    printWindow.document.close();
+  };
+
   const saveIncident = () => {
     if (!incidentForm.codigoEtiqueta || !incidentForm.descripcion.trim()) {
       alert("Debe indicar código etiqueta y descripción de la incidencia.");
-      printWindow.document.close();
-  };
+    
       return;
     }
 
