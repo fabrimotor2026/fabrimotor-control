@@ -4854,7 +4854,16 @@ saveIncidentsUpdate(
             ROSCA DERECHA
             </div>
           </div>
-
+          
+          <button
+            onClick={printBoxLabel}
+            disabled={totalCaja !== 16}
+            className={`mt-4 w-full rounded-2xl px-4 py-4 text-lg font-black text-white ${
+              totalCaja === 16 ? "bg-green-600" : "bg-slate-400"
+            }`}
+          >
+            Generar PDF etiqueta
+          </button>
       </div>
 
     </div>
