@@ -2127,7 +2127,85 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
 
   const boxLabelsSummary = getBoxLabelsSummary();
 
+  const printBoxLabelsReport = () => {
+  const summary = boxLabelsSummary;
 
+  if (!summary.length) {
+    alert("No hay cajas para generar el PDF.");
+    return;
+  }
+
+  const printWindow = window.open("", "_blank");
+
+  printWindow.document.write(`
+    <html>
+      <head>
+        <title>Control cajas F-1012</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 24px; color: #111827; }
+          h1 { margin: 0; font-size: 26px; }
+          .subtitle { margin-top: 6px; color: #475569; font-size: 13px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 18px; font-size: 12px; }
+          th { background: #1f2937; color: white; text-align: left; padding: 8px; border: 1px solid #111827; }
+          td { padding: 7px; border: 1px solid #cbd5e1; vertical-align: top; }
+          .right { text-align: right; }
+          .ok { color: #047857; font-weight: 900; }
+          .nok { color: #dc2626; font-weight: 900; }
+          .footer { margin-top: 18px; font-size: 11px; color: #64748b; }
+        </style>
+      </head>
+      <body>
+        <h1>Control cajas expedición · F-1012</h1>
+        <div class="subtitle">
+          Cajas completadas: ${summary.length} / 49 · Generado: ${new Date().toLocaleString("es-ES")}
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Nº Caja</th>
+              <th>Fecha</th>
+              <th>Operario</th>
+              <th class="right">Piezas</th>
+              <th>Combinaciones FAB/COL</th>
+              <th class="right">Semana</th>
+              <th class="right">Día</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${summary
+              .map(
+                (box) => `
+                  <tr>
+                    <td><strong>${box.numeroCaja}</strong></td>
+                    <td>${box.fecha || ""}</td>
+                    <td>${box.operario || ""}</td>
+                    <td class="right ${box.totalPiezas === 16 ? "ok" : "nok"}">${box.totalPiezas}</td>
+                    <td>${box.combinaciones.join("<br>")}</td>
+                    <td class="right">${box.semana || ""}</td>
+                    <td class="right">${box.dia || ""}</td>
+                  </tr>
+                `
+              )
+              .join("")}
+          </tbody>
+        </table>
+
+        <div class="footer">
+          FABRIMOTOR · Control digital F-1012 · Documento generado automáticamente.
+        </div>
+
+        <script>
+          window.onload = function() {
+            window.print();
+          };
+        </script>
+      </body>
+    </html>
+  `);
+
+  printWindow.document.close();
+};
 
   const exportBoxLabelsExcel = () => {
   const rows = boxLabels.map((row) => ({
@@ -2562,7 +2640,15 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                   Alta, edición, cambio de contraseña y eliminación de usuarios.
                 </p>
               </div>
-
+              
+              <button
+                onClick={printBoxLabelsReport}
+                disabled={boxLabelsSummary.length === 0}
+                className="rounded-xl bg-red-600 px-4 py-2 font-bold text-white disabled:bg-slate-300"
+              >
+                Exportar PDF
+              </button>
+              
               <button
                 onClick={exportBoxLabelsExcel}
                 disabled={boxLabels.length === 0}
