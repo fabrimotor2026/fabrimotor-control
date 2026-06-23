@@ -1853,16 +1853,17 @@ ${error?.message || String(error)}`);
           <title>Etiqueta Caja F-1012</title>
           <style>
             body { margin: 0; padding: 20px; font-family: Arial, sans-serif; color: #000; }
-            .label { width: 720px; border: 4px solid #000; padding: 18px; }
-            .top { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 4px solid #000; padding-bottom: 12px; font-size: 46px; font-weight: 900; }
+            .label { width: 1100px; min-height: 650px; border: 4px solid #000; padding: 20px; }
+            .top { display: grid; grid-template-columns: 1fr 1fr; align-items: center; border-bottom: 4px solid #000; padding-bottom: 14px; font-size: 54px; font-weight: 900; }
             .right { text-align: right; }
-            .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-top: 18px; text-align: center; font-size: 34px; font-weight: 900; }
-            .cell { border: 2px solid #000; padding: 8px; min-height: 42px; }
+            .rows { margin-top: 22px; border-bottom: 4px solid #000; padding-bottom: 18px; }
+            .data-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; margin-top: 14px; font-size: 42px; font-weight: 900; }
+            .data-row div { border: 2px solid #000; padding: 12px 18px; min-height: 56px; }
             .total { margin-top: 18px; border-top: 4px solid #000; border-bottom: 4px solid #000; padding: 12px; text-align: center; font-size: 38px; font-weight: 900; }
             .line { margin-top: 18px; font-size: 30px; font-weight: 900; }
             .week { margin-top: 18px; display: grid; grid-template-columns: 1fr 1fr; text-align: center; font-size: 30px; font-weight: 900; }
             .box { margin-top: 18px; display: grid; grid-template-columns: 1fr 1fr; border-top: 4px solid #000; border-bottom: 4px solid #000; padding: 12px; font-size: 40px; font-weight: 900; }
-            .thread { margin-top: 24px; text-align: center; font-size: 46px; font-weight: 900; }
+            .thread { margin-top: 40px; text-align: center; font-size: 72px; font-weight: 900;letter-spacing: 2px }
             @media print { body { padding: 0; } }
           </style>
         </head>
@@ -1870,20 +1871,22 @@ ${error?.message || String(error)}`);
           <div class="label">
             <div class="top">
               <div>F-1012</div>
-              <div class="right">1025980</div>
+              <div class="right">1025980 Ⓢ</div>
             </div>
 
-            <div class="grid">
-              <div>FAB.</div><div>COL.</div><div>CANT.</div>
-              <div class="cell">${labelForm.fab1 || ""}</div>
-              <div class="cell">${labelForm.col1 || ""}</div>
-              <div class="cell">${labelForm.cant1 || ""}</div>
-
-              <div>FAB.</div><div>COL.</div><div>CANT.</div>
-              <div class="cell">${labelForm.fab2 || ""}</div>
-              <div class="cell">${labelForm.col2 || ""}</div>
-              <div class="cell">${labelForm.cant2 || ""}</div>
+            <div class="rows">
+              <div class="data-row">
+              <div><strong>FAB.</strong> ${labelForm.fab1 || ""}</div>
+              <div><strong>COL.</strong> ${labelForm.col1 || ""}</div>
+              <div><strong>CANT.</strong> ${labelForm.cant1 || ""}</div>
             </div>
+            
+            <div class="data-row">
+              <div><strong>FAB.</strong> ${labelForm.fab2 || ""}</div>
+              <div><strong>COL.</strong> ${labelForm.col2 || ""}</div>
+              <div><strong>CANT.</strong> ${labelForm.cant2 || ""}</div>
+            </div>
+</div>
 
             <div class="total">Nº DE PIEZAS TOTAL: ${totalCaja}</div>
 
@@ -1898,7 +1901,7 @@ ${error?.message || String(error)}`);
             </div>
 
             <div class="box">
-              <div>FB-26</div>
+              <div>Nº Caja FB-26</div>
               <div class="right">${labelForm.numeroCaja || ""}</div>
             </div>
 
