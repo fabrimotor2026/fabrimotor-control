@@ -764,6 +764,36 @@ async function saveBoxLabelToSupabase(labelData) {
   if (error) throw error;
 }
 
+async function fetchBoxCounter() {
+  if (!isSupabaseConfigured || !supabase) return 1;
+
+  const { data, error } = await supabase
+    .from("f1012_box_counter")
+    .select("current_number")
+    .eq("id", "main")
+    .single();
+
+  if (error) throw error;
+
+  return data?.current_number || 1;
+}
+
+async function updateBoxCounter(nextNumber, updatedBy = "") {
+  if (!isSupabaseConfigured || !supabase) return;
+
+  const { error } = await supabase
+    .from("f1012_box_counter")
+    .update({
+      current_number: nextNumber,
+      updated_by: updatedBy,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", "main");
+
+  if (error) throw error;
+}
+
+
 async function fetchBoxLabelsFromSupabase() {
   if (!isSupabaseConfigured || !supabase) return [];
 
@@ -1050,6 +1080,7 @@ export default function App() {
   const [show8DModal, setShow8DModal] = useState(false);
   const [selected8D, setSelected8D] = useState(null);
   const [showLabelModal, setShowLabelModal] = useState(false);
+  const [boxCounter, setBoxCounter] = useState("");
   const [boxLabels, setBoxLabels] = useState([]);
   const [showBoxLabelsModal, setShowBoxLabelsModal] = useState(false);
 
@@ -1844,6 +1875,18 @@ ${error?.message || String(error)}`);
       `La etiqueta se imprimirá, pero NO se ha podido guardar en el listado de cajas.\n\n${error?.message || String(error)}`
     );
   });    
+  
+  const nextCounter = Number(labelForm.numeroCaja || 0) + 1;
+  
+  updateBoxCounter(
+    nextCounter,
+    currentUser ? `${currentUser.username} - ${currentUser.name}` : ""
+  ).catch((error) => {
+    console.error("Error actualizando contador de caja:", error);
+    alert(
+      `La etiqueta se ha generado, pero NO se ha podido actualizar el contador.\n\n${error?.message || String(error)}`
+    );
+  });
 
     const printWindow = window.open("", "_blank");
 
@@ -2937,7 +2980,20 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
             />
             
             <SidebarButton
-              onClick={() => setShowLabelModal(true)}
+              onClick={async () => {
+                try {
+                  const counter = await fetchBoxCounter();
+                  setBoxCounter(String(counter).padStart(5, "0"));
+                  setLabelForm({
+                    ...labelForm,
+                    numeroCaja: String(counter).padStart(5, "0"),
+                  });
+                  setShowLabelModal(true);
+                } catch (error) {
+                  console.error("Error cargando contador de caja:", error);
+                  alert("No se ha podido cargar el contador de caja.");
+                }
+              }}
               icon={<Printer className="h-4 w-4" />}
               label="Etiqueta caja"
             />
