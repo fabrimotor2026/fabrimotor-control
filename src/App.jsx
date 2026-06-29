@@ -642,13 +642,13 @@ async function fetchSharedRecords() {
     .order("saved_at_ms", { ascending: false });
 
   if (error) throw error;
-
+  
   return (data || []).map((row) => row.data).filter(Boolean);
 }
 
 async function upsertSharedRecord(record) {
   if (!isSupabaseConfigured || !supabase || !record?.id) return;
-
+  
   const { error } = await supabase.from("fabrimotor_records").upsert({
     id: record.id,
     reference: record.referencia || "F-1012",
@@ -687,7 +687,7 @@ async function fetchSharedIncidents() {
 
   if (error) throw error;
 
-  return (data || []).map((row) => row.data).filter(Boolean);
+
 }
 
 async function upsertSharedIncident(incident) {
@@ -778,6 +778,35 @@ async function boxLabelExists(numeroCaja) {
   if (error) throw error;
 
   return Array.isArray(data) && data.length > 0;
+}
+
+async function fetchAppSetting(key) {
+  if (!isSupabaseConfigured || !supabase) return null;
+
+  const { data, error } = await supabase
+    .from("fabrimotor_settings")
+    .select("value")
+    .eq("key", key)
+    .single();
+
+  if (error) throw error;
+
+  return data?.value || null;
+}
+
+async function updateAppSetting(key, value, updatedBy = "") {
+  if (!isSupabaseConfigured || !supabase) return;
+
+  const { error } = await supabase
+    .from("fabrimotor_settings")
+    .upsert({
+      key,
+      value,
+      updated_by: updatedBy,
+      updated_at: new Date().toISOString(),
+    });
+
+  if (error) throw error;
 }
 
 async function fetchBoxCounter() {
