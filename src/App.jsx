@@ -766,6 +766,20 @@ async function saveBoxLabelToSupabase(labelData) {
   if (error) throw error;
 }
 
+async function boxLabelExists(numeroCaja) {
+  if (!isSupabaseConfigured || !supabase) return false;
+
+  const { data, error } = await supabase
+    .from("f1012_box_labels")
+    .select("id")
+    .eq("numero_caja", numeroCaja)
+    .limit(1);
+
+  if (error) throw error;
+
+  return Array.isArray(data) && data.length > 0;
+}
+
 async function fetchBoxCounter() {
   if (!isSupabaseConfigured || !supabase) return 1;
 
@@ -1828,9 +1842,10 @@ ${error?.message || String(error)}`);
       console.error("Error eliminando usuario en Supabase:", error);
       setUsersMode("Local sin conexión");
       alert(`Usuario eliminado localmente, pero no se ha podido eliminar en Supabase:\n\n${error?.message || String(error)}`);
-    }
+    }    
   };
-  const printBoxLabel = () => {
+
+  const printBoxLabel = async () => {
     if (totalCaja !== 16) {
       alert("La suma de piezas debe ser exactamente 16.");
       return;
@@ -1846,10 +1861,26 @@ ${error?.message || String(error)}`);
       return;
     }
 
-    if (!labelForm.numeroCaja || labelForm.numeroCaja.length > 5) {
-      alert("El Nº de caja es obligatorio y debe tener máximo 5 cifras.");
+    const counter = await fetchBoxCounter();
+    const numeroCajaAsignado = String(counter).padStart(5, "0");
+    const numeroCajaCompleto = `FB26-${numeroCajaAsignado}`;
+    
+        
+    try {
+      const exists = await boxLabelExists(numeroCajaCompleto);
+      
+      if (exists) {
+        alert(
+          `La caja ${numeroCajaCompleto} ya existe.\n\nNo se imprimirá la etiqueta.\n\nContacte con el administrador.`
+        );
+        return;
+      }
+    } catch (error) {
+      console.error("Error comprobando duplicado de caja:", error);
+      alert("No se ha podido comprobar si la caja ya existe. No se imprimirá la etiqueta.");
       return;
     }
+  
 
   const labelData = {
     fab1: labelForm.fab1,
@@ -1862,7 +1893,7 @@ ${error?.message || String(error)}`);
 
     operario1: labelForm.operario1,
     operario2: labelForm.operario2,
-    numeroCaja: `FB26-${labelForm.numeroCaja}`,
+    numeroCaja: numeroCajaCompleto,
 
     semana: numeroSemana,
     dia: numeroDia,
@@ -1870,7 +1901,6 @@ ${error?.message || String(error)}`);
   };
 
   saveBoxLabelToSupabase(labelData).catch((error) => {
-    console.log("FILAS ETIQUETA A GUARDAR:", rows);
     console.log("GUARDANDO ETIQUETA:", labelData);
     console.error("Error guardando etiqueta de caja:", error);
     alert(
@@ -1878,7 +1908,7 @@ ${error?.message || String(error)}`);
     );
   });    
   
-  const nextCounter = Number(labelForm.numeroCaja || 0) + 1;
+  const nextCounter = counter + 1;
   
   updateBoxCounter(
     nextCounter,
@@ -1947,7 +1977,7 @@ ${error?.message || String(error)}`);
 
             <div class="box">
               <div>Nº Caja FB-26</div>
-              <div class="right">${labelForm.numeroCaja || ""}</div>
+              <div class="right">${numeroCajaAsignado}</div>
             </div>
 
             <div class="thread">ROSCA DERECHA</div>
@@ -2982,19 +3012,12 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
             />
             
             <SidebarButton
-              onClick={async () => {
-                try {
-                  const counter = await fetchBoxCounter();
-                  setBoxCounter(String(counter).padStart(5, "0"));
-                  setLabelForm({
-                    ...labelForm,
-                    numeroCaja: String(counter).padStart(5, "0"),
-                  });
-                  setShowLabelModal(true);
-                } catch (error) {
-                  console.error("Error cargando contador de caja:", error);
-                  alert("No se ha podido cargar el contador de caja.");
-                }
+              onClick={() => {
+                setLabelForm({
+                  ...labelForm,
+                  numeroCaja: "",
+                });
+                setShowLabelModal(true);
               }}
               icon={<Printer className="h-4 w-4" />}
               label="Etiqueta caja"
@@ -5249,11 +5272,6 @@ saveIncidentsUpdate(
     </div>
   );
 }
-
-
-
-
-
 function SidebarButton({ active, onClick, icon, label, badge, danger }) {
   return (
     <button

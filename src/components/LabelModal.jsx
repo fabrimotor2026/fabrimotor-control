@@ -146,7 +146,7 @@ export default function LabelModal({
           <div className="mt-4">
             <input
               className="input bg-slate-100 font-black text-slate-900"
-              placeholder="Número de caja (5 cifras)"
+              placeholder="Se asignará automáticamente al imprimir"
               value={labelForm.numeroCaja}
               maxLength={5}
               readOnly
