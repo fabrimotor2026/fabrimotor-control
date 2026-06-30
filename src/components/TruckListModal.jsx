@@ -5,7 +5,24 @@ export default function TruckListModal({
   printBoxLabelsReport,
   appConfig,
   onClose,
+  truckProgress,
 }) {
+  
+ const safeTruckProgress = truckProgress || {
+  completedBoxes: boxLabelsSummary.length,
+  targetBoxes: appConfig.boxesPerTruck || 49,
+  remainingBoxes: Math.max((appConfig.boxesPerTruck || 49) - boxLabelsSummary.length, 0),
+  percent:
+    appConfig.boxesPerTruck > 0
+      ? Math.min((boxLabelsSummary.length / appConfig.boxesPerTruck) * 100, 100)
+      : 0,
+  isComplete: boxLabelsSummary.length >= (appConfig.boxesPerTruck || 49),
+  lastBox:
+    boxLabelsSummary.length > 0
+      ? boxLabelsSummary[boxLabelsSummary.length - 1]
+      : null,
+};
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div className="max-h-[90vh] w-full max-w-6xl overflow-auto rounded-3xl bg-white p-6 shadow-2xl">
@@ -49,6 +66,49 @@ export default function TruckListModal({
             </button>
           </div>
         </div>
+
+        {safeTruckProgress && (
+          <div className="mb-5 rounded-2xl border border-blue-200 bg-blue-50 p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <div>
+                <div className="text-lg font-black text-blue-900">
+                  Camión {appConfig.reference}
+                </div>
+                <div className="text-sm text-blue-700">
+                  Última caja: {safeTruckProgress.lastBox?.numeroCaja || "-"}
+                </div>
+              </div>
+              
+              <div
+                className={`rounded-full px-4 py-2 text-sm font-black ${
+                  safeTruckProgress.isComplete
+                    ? "bg-emerald-600 text-white"
+                    : "bg-blue-700 text-white"
+                 }`}
+              >
+                 {safeTruckProgress.isComplete ? "CAMIÓN COMPLETO" : "EN PREPARACIÓN"}
+              </div>
+            </div>
+            
+            <div className="mb-2 flex items-center justify-between text-sm font-bold text-blue-900">
+              <span>
+                {safeTruckProgress.completedBoxes} / {safeTruckProgress.targetBoxes} cajas
+              </span>
+              <span>
+                Faltan {safeTruckProgress.remainingBoxes} cajas
+              </span>
+            </div>
+            
+            <div className="h-4 overflow-hidden rounded-full bg-white">
+              <div
+                className={`h-full ${
+                  safeTruckProgress.isComplete ? "bg-emerald-600" : "bg-blue-600"
+                }`}
+                style={{ width: `${safeTruckProgress.percent}%` }}
+              />
+            </div>
+          </div>
+        )}
 
         {boxLabelsSummary.length > 0 && (
           <div className="mb-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">

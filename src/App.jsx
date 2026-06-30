@@ -2287,6 +2287,28 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
 
   const boxLabelsSummary = getBoxLabelsSummary();
 
+  const truckProgress = useMemo(() => {
+  const completedBoxes = boxLabelsSummary.length;
+  const targetBoxes = appConfig.boxesPerTruck || 49;
+
+  const lastBox =
+    boxLabelsSummary.length > 0
+      ? boxLabelsSummary[boxLabelsSummary.length - 1]
+      : null;
+
+  return {
+    completedBoxes,
+    targetBoxes,
+    remainingBoxes: Math.max(targetBoxes - completedBoxes, 0),
+    percent:
+      targetBoxes > 0
+        ? Math.min((completedBoxes / targetBoxes) * 100, 100)
+        : 0,
+    isComplete: completedBoxes >= targetBoxes,
+    lastBox,
+  };
+}, [boxLabelsSummary, appConfig.boxesPerTruck]);
+
   const printBoxLabelsReport = () => {
   const summary = boxLabelsSummary;
 
@@ -2661,6 +2683,73 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
     console.error("Error cargando listado de cajas:", error);
     alert("No se ha podido cargar el listado de cajas.");
   }
+
+  async function fetchOpenTruck(reference) {
+  if (!isSupabaseConfigured || !supabase) return null;
+
+  const { data, error } = await supabase
+    .from("f1012_trucks")
+    .select("*")
+    .eq("reference", reference)
+    .eq("status", "OPEN")
+    .order("truck_number", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+
+  return data;
+}
+
+async function fetchNextTruckNumber(reference) {
+  if (!isSupabaseConfigured || !supabase) return 1;
+
+  const { data, error } = await supabase
+    .from("f1012_trucks")
+    .select("truck_number")
+    .eq("reference", reference)
+    .order("truck_number", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+
+  return (data?.truck_number || 0) + 1;
+}
+
+async function createTruck(reference, createdBy = "") {
+  const truckNumber = await fetchNextTruckNumber(reference);
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  const { data, error } = await supabase
+    .from("f1012_trucks")
+    .insert({
+      reference,
+      truck_number: truckNumber,
+      planned_expedition_date: today,
+      status: "OPEN",
+      created_by: createdBy,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  return data;
+}
+
+async function getActiveTruck(reference, createdBy = "") {
+  let truck = await fetchOpenTruck(reference);
+
+  if (!truck) {
+    truck = await createTruck(reference, createdBy);
+  }
+
+  return truck;
+}
+
+
 };
 
   const confirmProductionStart = () => {
@@ -5212,6 +5301,7 @@ saveIncidentsUpdate(
     exportBoxLabelsExcel={exportBoxLabelsExcel}
     printBoxLabelsReport={printBoxLabelsReport}
     appConfig={appConfig}
+    truckProgress={truckProgress}
     onClose={() => setShowBoxLabelsModal(false)}
   />
 )}
