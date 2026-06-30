@@ -1142,7 +1142,17 @@ export default function App() {
   operario2: "",
 
   numeroCaja: "",
+  
 });
+
+  const [appConfig, setAppConfig] = useState({
+    reference: "F-1012",
+    cell: "Célula B",
+    boxPrefix: "FB-26",
+    piecesPerBox: 16,
+    boxesPerTruck: 49,
+    threadText: "ROSCA DERECHA",
+  });
 
   const totalCaja =
     Number(labelForm.cant1 || 0) +
@@ -1169,6 +1179,31 @@ export default function App() {
     return [];
   }
 });
+
+useEffect(() => {
+  let cancelled = false;
+
+  const loadAppConfig = async () => {
+    try {
+      const config = await fetchAppSetting("f1012_config");
+
+      if (cancelled || !config) return;
+
+      setAppConfig((previous) => ({
+        ...previous,
+        ...config,
+      }));
+    } catch (error) {
+      console.error("No se ha podido cargar configuración F-1012:", error);
+    }
+  };
+
+  loadAppConfig();
+
+  return () => {
+    cancelled = true;
+  };
+}, []);
 
 useEffect(() => {
   let cancelled = false;
@@ -5118,6 +5153,7 @@ saveIncidentsUpdate(
 </div>
 </div>
 )}
+
 {showLabelModal && (
   <LabelModal
     labelForm={labelForm}
@@ -5126,6 +5162,7 @@ saveIncidentsUpdate(
     numeroSemana={numeroSemana}
     numeroDia={numeroDia}
     printBoxLabel={printBoxLabel}
+    appConfig={appConfig}
     onClose={() => setShowLabelModal(false)}
   />
 )}
@@ -5136,6 +5173,7 @@ saveIncidentsUpdate(
     boxLabelsSummary={boxLabelsSummary}
     exportBoxLabelsExcel={exportBoxLabelsExcel}
     printBoxLabelsReport={printBoxLabelsReport}
+    appConfig={appConfig}
     onClose={() => setShowBoxLabelsModal(false)}
   />
 )}

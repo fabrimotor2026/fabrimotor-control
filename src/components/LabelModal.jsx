@@ -5,6 +5,7 @@ export default function LabelModal({
   numeroSemana,
   numeroDia,
   printBoxLabel,
+  appConfig,
   onClose,
 }) {
   return (
@@ -13,7 +14,7 @@ export default function LabelModal({
 
         <div className="mb-6 flex items-center justify-between">
           <h2 className="text-2xl font-black">
-            Etiqueta Caja F-1012
+            Etiqueta Caja {appConfig.reference}
           </h2>
 
           <button
@@ -171,7 +172,7 @@ export default function LabelModal({
 
           <div className="mt-6 scale-75 origin-top rounded-2xl border-4 border-black bg-white p-4 text-black">
             <div className="grid grid-cols-2 border-b-4 border-black pb-3">
-              <div className="text-5xl font-black">F-1012</div>
+              <div className="text-5xl font-black">{appConfig.reference}</div>
               <div className="text-right text-5xl font-black">1025980 Ⓢ</div>
             </div>
 
@@ -200,12 +201,12 @@ export default function LabelModal({
             </div>
 
             <div className="mt-4 grid grid-cols-2 border-y-4 border-black py-3 text-4xl font-black">
-              <div>Nº Caja FB-26</div>
+              <div>Nº Caja {appConfig.boxPrefix}</div>
               <div className="text-right">{labelForm.numeroCaja || "00000"}</div>
             </div>
 
             <div className="mt-5 text-center text-5xl font-black">
-              ROSCA DERECHA
+              {appConfig.threadText}
             </div>
           </div>
 

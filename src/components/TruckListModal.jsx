@@ -3,6 +3,7 @@ export default function TruckListModal({
   boxLabelsSummary,
   exportBoxLabelsExcel,
   printBoxLabelsReport,
+  appConfig,
   onClose,
 }) {
   return (
@@ -11,7 +12,7 @@ export default function TruckListModal({
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-black text-slate-900">
-              Listado cajas camión · F-1012
+              Listado cajas camión · {appConfig.reference}
             </h2>
 
             <p className="text-sm text-slate-500">
@@ -19,7 +20,7 @@ export default function TruckListModal({
             </p>
 
             <p className="text-sm font-bold text-emerald-700">
-              {boxLabelsSummary.length} / 49 cajas completadas
+              {boxLabelsSummary.length} / {appConfig.boxesPerTruck} cajas completadas
             </p>
           </div>
 
@@ -156,7 +157,7 @@ export default function TruckListModal({
           <strong>
             {new Set(boxLabels.map((row) => row.numero_caja)).size}
           </strong>{" "}
-          / 49
+          / {appConfig.boxesPerTruck}
         </div>
       </div>
     </div>
