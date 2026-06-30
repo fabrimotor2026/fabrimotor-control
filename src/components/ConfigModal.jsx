@@ -23,81 +23,107 @@ export default function ConfigModal({
           </button>
         </div>
 
-        <div className="grid gap-4">
-          <input
-            className="input"
-            placeholder="Referencia"
-            value={configForm.reference}
-            onChange={(e) =>
-              setConfigForm({ ...configForm, reference: e.target.value })
-            }
-          />
+        <div className="grid gap-5">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <h3 className="mb-3 text-lg font-black text-slate-800">General</h3>
 
-          <input
-            className="input"
-            placeholder="Célula"
-            value={configForm.cell}
-            onChange={(e) =>
-              setConfigForm({ ...configForm, cell: e.target.value })
-            }
-          />
+            <div className="grid gap-3 md:grid-cols-2">
+              <input
+                className="input"
+                placeholder="Referencia"
+                value={configForm.reference}
+                onChange={(e) =>
+                  setConfigForm({ ...configForm, reference: e.target.value })
+                }
+              />
 
-          <input
-            className="input"
-            placeholder="Prefijo cajas"
-            value={configForm.boxPrefix}
-            onChange={(e) =>
-              setConfigForm({ ...configForm, boxPrefix: e.target.value })
-            }
-          />
+              <input
+                className="input"
+                placeholder="Célula"
+                value={configForm.cell}
+                onChange={(e) =>
+                  setConfigForm({ ...configForm, cell: e.target.value })
+                }
+              />
 
-          <input
-            className="input"
-            placeholder="Código pieza / plano"
-            value={configForm.partCode}
-            onChange={(e) =>
-                setConfigForm({ ...configForm, partCode: e.target.value })
-            }
-            />
+              <input
+                className="input md:col-span-2"
+                placeholder="Código pieza / plano"
+                value={configForm.partCode}
+                onChange={(e) =>
+                  setConfigForm({ ...configForm, partCode: e.target.value })
+                }
+              />
+            </div>
+          </div>
 
-          <input
-            className="input"
-            type="number"
-            placeholder="Piezas por caja"
-            value={configForm.piecesPerBox}
-            onChange={(e) =>
-              setConfigForm({
-                ...configForm,
-                piecesPerBox: Number(e.target.value || 0),
-              })
-            }
-          />
+          <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
+            <h3 className="mb-3 text-lg font-black text-blue-900">Etiqueta</h3>
 
-          <input
-            className="input"
-            type="number"
-            placeholder="Cajas por camión"
-            value={configForm.boxesPerTruck}
-            onChange={(e) =>
-              setConfigForm({
-                ...configForm,
-                boxesPerTruck: Number(e.target.value || 0),
-              })
-            }
-          />
+            <div className="grid gap-3 md:grid-cols-2">
+              <input
+                className="input"
+                placeholder="Prefijo cajas"
+                value={configForm.boxPrefix}
+                onChange={(e) =>
+                  setConfigForm({ ...configForm, boxPrefix: e.target.value })
+                }
+              />
 
-          <input
-            className="input"
-            placeholder="Texto etiqueta"
-            value={configForm.threadText}
-            onChange={(e) =>
-              setConfigForm({ ...configForm, threadText: e.target.value })
-            }
-          />
+              <input
+                className="input"
+                type="number"
+                placeholder="Piezas por caja"
+                value={configForm.piecesPerBox}
+                onChange={(e) =>
+                  setConfigForm({
+                    ...configForm,
+                    piecesPerBox: Number(e.target.value || 0),
+                  })
+                }
+              />
+
+              <input
+                className="input md:col-span-2"
+                placeholder="Texto etiqueta"
+                value={configForm.threadText}
+                onChange={(e) =>
+                  setConfigForm({ ...configForm, threadText: e.target.value })
+                }
+              />
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+            <h3 className="mb-3 text-lg font-black text-emerald-900">
+              Expedición
+            </h3>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <input
+                className="input"
+                type="number"
+                placeholder="Cajas por camión"
+                value={configForm.boxesPerTruck}
+                onChange={(e) =>
+                  setConfigForm({
+                    ...configForm,
+                    boxesPerTruck: Number(e.target.value || 0),
+                  })
+                }
+              />
+            </div>
+          </div>
         </div>
 
         <button
           onClick={async () => {
+            const confirmed = window.confirm(
+              "¿Guardar cambios de configuración?\n\nEstos cambios afectarán a la aplicación."
+            );
+
+            if (!confirmed) return;
+
             try {
               await updateAppSetting(
                 "f1012_config",
