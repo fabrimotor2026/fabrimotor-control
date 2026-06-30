@@ -173,7 +173,7 @@ export default function LabelModal({
           <div className="mt-6 scale-75 origin-top rounded-2xl border-4 border-black bg-white p-4 text-black">
             <div className="grid grid-cols-2 border-b-4 border-black pb-3">
               <div className="text-5xl font-black">{appConfig.reference}</div>
-              <div className="text-right text-5xl font-black">1025980 Ⓢ</div>
+              <div className="text-right text-5xl font-black">{appConfig.partCode} Ⓢ</div>
             </div>
 
             <div className="mt-4 grid grid-cols-3 gap-2 text-center text-3xl font-black">
