@@ -156,7 +156,7 @@ export default function LabelModal({
 
           <div
             className={`text-4xl font-black ${
-              totalCaja === 16
+              totalCaja === appConfig.piecesPerBox
                 ? "text-green-600"
                 : "text-red-600"
             }`}
@@ -164,9 +164,9 @@ export default function LabelModal({
             {totalCaja}
           </div>
 
-          {totalCaja !== 16 && (
+          {totalCaja !== appConfig.piecesPerBox && (
             <div className="mt-2 text-red-600">
-              La suma debe ser exactamente 16 piezas
+              La suma debe ser exactamente {appConfig.piecesPerBox} piezas
             </div>
           )}
 
@@ -212,9 +212,9 @@ export default function LabelModal({
 
           <button
             onClick={printBoxLabel}
-            disabled={totalCaja !== 16}
+            disabled={totalCaja !== appConfig.piecesPerBox}
             className={`mt-4 w-full rounded-2xl px-4 py-4 text-lg font-black text-white ${
-              totalCaja === 16 ? "bg-green-600" : "bg-slate-400"
+              totalCaja === appConfig.piecesPerBox ? "bg-green-600" : "bg-slate-400"
             }`}
           >
             Generar PDF etiqueta

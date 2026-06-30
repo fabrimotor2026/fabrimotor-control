@@ -15,6 +15,7 @@ import {
   Info,
   FileText,
   Printer,
+  Settings,
   TrendingUp,
   Package,
   X,
@@ -1128,6 +1129,16 @@ export default function App() {
   const [boxCounter, setBoxCounter] = useState("");
   const [boxLabels, setBoxLabels] = useState([]);
   const [showBoxLabelsModal, setShowBoxLabelsModal] = useState(false);
+  const [showConfigModal, setShowConfigModal] = useState(false);
+  
+  const [configForm, setConfigForm] = useState({
+  reference: "F-1012",
+  cell: "Célula B",
+  boxPrefix: "FB-26",
+  piecesPerBox: 16,
+  boxesPerTruck: 49,
+  threadText: "ROSCA DERECHA",
+});
 
   const [labelForm, setLabelForm] = useState({
   fab1: "",
@@ -1204,6 +1215,10 @@ useEffect(() => {
     cancelled = true;
   };
 }, []);
+
+  useEffect(() => {
+    setConfigForm(appConfig);
+  }, [appConfig]);
 
 useEffect(() => {
   let cancelled = false;
@@ -1910,8 +1925,8 @@ ${error?.message || String(error)}`);
   };
 
   const printBoxLabel = async () => {
-    if (totalCaja !== 16) {
-      alert("La suma de piezas debe ser exactamente 16.");
+    if (totalCaja !== appConfig.piecesPerBox) {
+      alert(`La suma de piezas debe ser exactamente ${appConfig.piecesPerBox}.`);
       return;
     }
 
@@ -1927,7 +1942,7 @@ ${error?.message || String(error)}`);
 
     const counter = await fetchBoxCounter();
     const numeroCajaAsignado = String(counter).padStart(5, "0");
-    const numeroCajaCompleto = `FB26-${numeroCajaAsignado}`;
+    const numeroCajaCompleto = `${appConfig.boxPrefix}-${numeroCajaAsignado}`;
     
         
     try {
@@ -3136,6 +3151,14 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
                 onClick={() => setShowAdminPanel(true)}
                 icon={<Users className="h-4 w-4" />}
                 label="Panel Administrador"
+              />
+            )}
+
+            {isAdminUser(currentUser) && (
+              <SidebarButton
+                onClick={() => setShowConfigModal(true)}
+                icon={<Settings className="h-4 w-4" />}
+                label="Configuración"
               />
             )}
           </nav>
@@ -5152,6 +5175,111 @@ saveIncidentsUpdate(
 </div>
 </div>
 </div>
+)}
+
+{showConfigModal && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+    <div className="w-full max-w-2xl rounded-3xl bg-white p-6 shadow-2xl">
+      <div className="mb-6 flex items-center justify-between">
+        <h2 className="text-2xl font-black">
+          Configuración {appConfig.reference}
+        </h2>
+
+        <button
+          onClick={() => setShowConfigModal(false)}
+          className="rounded-xl bg-slate-100 px-4 py-2 font-bold"
+        >
+          Cerrar
+        </button>
+      </div>
+
+      <div className="grid gap-4">
+        <input
+          className="input"
+          placeholder="Referencia"
+          value={configForm.reference}
+          onChange={(e) =>
+            setConfigForm({ ...configForm, reference: e.target.value })
+          }
+        />
+
+        <input
+          className="input"
+          placeholder="Célula"
+          value={configForm.cell}
+          onChange={(e) =>
+            setConfigForm({ ...configForm, cell: e.target.value })
+          }
+        />
+
+        <input
+          className="input"
+          placeholder="Prefijo cajas"
+          value={configForm.boxPrefix}
+          onChange={(e) =>
+            setConfigForm({ ...configForm, boxPrefix: e.target.value })
+          }
+        />
+
+        <input
+          className="input"
+          type="number"
+          placeholder="Piezas por caja"
+          value={configForm.piecesPerBox}
+          onChange={(e) =>
+            setConfigForm({
+              ...configForm,
+              piecesPerBox: Number(e.target.value || 0),
+            })
+          }
+        />
+
+        <input
+          className="input"
+          type="number"
+          placeholder="Cajas por camión"
+          value={configForm.boxesPerTruck}
+          onChange={(e) =>
+            setConfigForm({
+              ...configForm,
+              boxesPerTruck: Number(e.target.value || 0),
+            })
+          }
+        />
+
+        <input
+          className="input"
+          placeholder="Texto etiqueta"
+          value={configForm.threadText}
+          onChange={(e) =>
+            setConfigForm({ ...configForm, threadText: e.target.value })
+          }
+        />
+      </div>
+
+      <button
+        onClick={async () => {
+          try {
+            await updateAppSetting(
+              "f1012_config",
+              configForm,
+              currentUser ? `${currentUser.username} - ${currentUser.name}` : ""
+            );
+
+            setAppConfig(configForm);
+            setShowConfigModal(false);
+            alert("Configuración guardada correctamente.");
+          } catch (error) {
+            console.error("Error guardando configuración:", error);
+            alert("No se ha podido guardar la configuración.");
+          }
+        }}
+        className="mt-6 w-full rounded-2xl bg-blue-600 px-4 py-3 font-black text-white"
+      >
+        Guardar configuración
+      </button>
+    </div>
+  </div>
 )}
 
 {showLabelModal && (
