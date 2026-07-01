@@ -1242,9 +1242,9 @@ async function updateTruckExpeditionDate(truckId, newDate) {
 }
 
   async function closeActiveTruck() {
-    if (!activeTruck) return;
-    
-    const confirmar = window.confirm(
+  if (!activeTruck) return;
+
+  const confirmar = window.confirm(
     `¿Desea cerrar el camión ${activeTruck.truck_number}?\n\nNo podrán añadirse más cajas a este camión.`
   );
 
@@ -1252,10 +1252,18 @@ async function updateTruckExpeditionDate(truckId, newDate) {
 
   await closeTruckFromService(supabase, activeTruck.id);
 
-  setActiveTruck(null);
+  const newTruck = await getActiveTruck(
+    appConfig.reference,
+    currentUser ? `${currentUser.username} - ${currentUser.name}` : ""
+  );
+
+  setActiveTruck(newTruck);
+  setBoxLabels([]);
   setShowBoxLabelsModal(false);
 
-  alert("Camión cerrado correctamente.");
+  alert(
+    `Camión ${activeTruck.truck_number} cerrado correctamente.\n\nNuevo camión activo: ${newTruck.truck_number}`
+  );
 }
 
 
