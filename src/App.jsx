@@ -42,6 +42,11 @@ import VisualHelpModalComponent from "./components/modals/VisualHelpModal";
 import EditRecordModalComponent from "./components/modals/EditRecordModal";
 import CpkModalComponent from "./components/modals/CpkModal";
 import RejectsModalComponent from "./components/modals/RejectsModal";
+import {
+  getActiveTruck as getActiveTruckFromService,
+  updateTruckExpeditionDate as updateTruckExpeditionDateFromService,
+  closeTruck as closeTruckFromService,
+} from "./services/truckService";
 
 const ACCESS_CODE = "1234";
 
@@ -729,6 +734,7 @@ async function saveBoxLabelToSupabase(labelData) {
       operario1: labelData.operario1,
       operario2: labelData.operario2 || "",
       numero_caja: labelData.numeroCaja,
+      camion_id: labelData.camionId,
       linea: 1,
       fabricacion: labelData.fab1,
       colada: labelData.col1,
@@ -752,6 +758,7 @@ async function saveBoxLabelToSupabase(labelData) {
       operario1: labelData.operario1,
       operario2: labelData.operario2 || "",
       numero_caja: labelData.numeroCaja,
+      camionId: activeTruck.id,
       linea: 2,
       fabricacion: labelData.fab2,
       colada: labelData.col2,
@@ -761,25 +768,55 @@ async function saveBoxLabelToSupabase(labelData) {
     });
   }
 
-  const { error } = await supabase
-    .from("f1012_box_labels")
-    .insert(rows);
+  const camionActivo = await fetchActiveTruck();
 
-  if (error) throw error;
+if (!camionActivo) {
+  throw new Error("No hay ningún camión activo abierto.");
 }
 
-async function boxLabelExists(numeroCaja) {
-  if (!isSupabaseConfigured || !supabase) return false;
+const rowsWithTruck = rows.map((row) => ({
+  ...row,
+  camion_id: camionActivo.id,
+}));
+
+const { error } = await supabase
+  .from("f1012_box_labels")
+  .insert(rowsWithTruck);
+
+if (error) throw error;
+}
+
+async function fetchActiveTruck() {
+  if (!isSupabaseConfigured || !supabase) return null;
+
+  const { data, error } = await supabase
+    .from("f1012_trucks")
+    .select("*")
+    .eq("status", "OPEN")
+    .single();
+
+  if (error) throw error;
+
+  return data;
+}
+
+async function fetchBoxLabelsFromSupabase(truckId = null) {
+  if (!isSupabaseConfigured || !supabase) return [];
+
+  if (!truckId) {
+    return [];
+  }
 
   const { data, error } = await supabase
     .from("f1012_box_labels")
-    .select("id")
-    .eq("numero_caja", numeroCaja)
-    .limit(1);
+    .select("*")
+    .eq("camion_id", truckId)
+    .order("numero_caja", { ascending: true })
+    .order("linea", { ascending: true });
 
   if (error) throw error;
 
-  return Array.isArray(data) && data.length > 0;
+  return data || [];
 }
 
 async function fetchAppSetting(key) {
@@ -811,6 +848,23 @@ async function updateAppSetting(key, value, updatedBy = "") {
   if (error) throw error;
 }
 
+async function boxLabelExists(numeroCaja) {
+  if (!isSupabaseConfigured || !supabase) return false;
+
+  const { data, error } = await supabase
+    .from("f1012_box_labels")
+    .select("id")
+    .eq("numero_caja", numeroCaja)
+    .limit(1);
+
+  if (error) {
+    console.error("Error comprobando si la caja existe:", error);
+    throw error;
+  }
+
+  return Array.isArray(data) && data.length > 0;
+}
+
 async function fetchBoxCounter() {
   if (!isSupabaseConfigured || !supabase) return 1;
 
@@ -840,20 +894,6 @@ async function updateBoxCounter(nextNumber, updatedBy = "") {
   if (error) throw error;
 }
 
-
-async function fetchBoxLabelsFromSupabase() {
-  if (!isSupabaseConfigured || !supabase) return [];
-
-  const { data, error } = await supabase
-    .from("f1012_box_labels")
-    .select("*")
-    .order("numero_caja", { ascending: true })
-    .order("linea", { ascending: true });
-
-  if (error) throw error;
-
-  return data || [];
-}
 
 function normalizeSharedRole(role) {
   const value = String(role || "").trim();
@@ -1083,6 +1123,19 @@ function isQualityDailyValidationEmpty(check) {
   return isQualityDailyCheckEmptyById(check.id, check.value);
 }
 export default function App() {
+  const [activeTruck, setActiveTruck] = useState(null);
+  const [appUsers, setAppUsers] = useState(() => getStoredUsers());
+
+  const [adminSearch, setAdminSearch] = useState("");
+  
+  const [adminUserForm, setAdminUserForm] = useState({
+    username: "",
+    name: "",
+    password: "",
+    role: "Operario",
+  });
+  
+  const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [form, setForm] = useState(initialForm());
   const [values, setValues] = useState({});
   const [timerStart, setTimerStart] = useState(null);
@@ -1167,6 +1220,44 @@ export default function App() {
     boxesPerTruck: 49,
     threadText: "ROSCA DERECHA",
   });
+
+  async function getActiveTruck(reference, createdBy = "") {
+  if (!isSupabaseConfigured || !supabase) return null;
+
+  return await getActiveTruckFromService(supabase, reference, createdBy);
+}
+
+async function updateTruckExpeditionDate(truckId, newDate) {
+  if (!isSupabaseConfigured || !supabase) return;
+
+  const updatedTruck = await updateTruckExpeditionDateFromService(
+    supabase,
+    truckId,
+    newDate
+  );
+
+  setActiveTruck(updatedTruck);
+
+  return updatedTruck;
+}
+
+  async function closeActiveTruck() {
+    if (!activeTruck) return;
+    
+    const confirmar = window.confirm(
+    `¿Desea cerrar el camión ${activeTruck.truck_number}?\n\nNo podrán añadirse más cajas a este camión.`
+  );
+
+  if (!confirmar) return;
+
+  await closeTruckFromService(supabase, activeTruck.id);
+
+  setActiveTruck(null);
+  setShowBoxLabelsModal(false);
+
+  alert("Camión cerrado correctamente.");
+}
+
 
   const totalCaja =
     Number(labelForm.cant1 || 0) +
@@ -1363,20 +1454,13 @@ useEffect(() => {
     }
   });
 
-  const [appUsers, setAppUsers] = useState(() => getStoredUsers());
+  
   const [databaseMode, setDatabaseMode] = useState(isSupabaseConfigured ? "Conectando..." : "Local");
   const [lastSyncAt, setLastSyncAt] = useState("");
   const [usersMode, setUsersMode] = useState(isSupabaseConfigured ? "Conectando..." : "Local");
   const [lastUsersSyncAt, setLastUsersSyncAt] = useState("");
 
-  const [showAdminPanel, setShowAdminPanel] = useState(false);
-  const [adminUserForm, setAdminUserForm] = useState({
-    username: "",
-    name: "",
-    password: "",
-    role: "Operario",
-  });
-  const [adminSearch, setAdminSearch] = useState("");
+  
 
   const [showProductionStart, setShowProductionStart] = useState(() => {
     try {
@@ -1946,8 +2030,18 @@ ${error?.message || String(error)}`);
     const counter = await fetchBoxCounter();
     const numeroCajaAsignado = String(counter).padStart(5, "0");
     const numeroCajaCompleto = `${appConfig.boxPrefix}-${numeroCajaAsignado}`;
+    const truck = await getActiveTruck(
+      appConfig.reference,
+      currentUser ? `${currentUser.username} - ${currentUser.name}` : ""
+    );
     
-        
+    setActiveTruck(truck);
+    
+    if (!truck) {
+      alert("No existe ningún camión abierto.");
+      return;
+    }
+            
     try {
       const exists = await boxLabelExists(numeroCajaCompleto);
       
@@ -1976,6 +2070,9 @@ ${error?.message || String(error)}`);
     operario1: labelForm.operario1,
     operario2: labelForm.operario2,
     numeroCaja: numeroCajaCompleto,
+
+    truckNumber: truck.truck_number,
+    plannedExpeditionDate: truck.planned_expedition_date,
 
     semana: numeroSemana,
     dia: numeroDia,
@@ -2661,32 +2758,34 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
     }));
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("fabrimotor-current-user");
-    localStorage.removeItem("startupReference");
-    localStorage.removeItem("startupPiece");
-    localStorage.removeItem("startupOF");
-    setStartupReference("F-1012");
-    setStartupPiece("");
-    setStartupOF("");
-    setShowProductionStart(false);
-    setCurrentUser(null);
-  };
-
   const openBoxLabelsModal = async () => {
   try {
-    const labels = await fetchBoxLabelsFromSupabase();
-
+    const truck = await refreshActiveTruck();
+    const labels = await fetchBoxLabelsFromSupabase(truck?.id);
     setBoxLabels(labels);
+
     setShowBoxLabelsModal(true);
   } catch (error) {
     console.error("Error cargando listado de cajas:", error);
     alert("No se ha podido cargar el listado de cajas.");
   }
+};
 
-  async function fetchOpenTruck(reference) {
+const handleLogout = () => {
+  localStorage.removeItem("fabrimotor-current-user");
+  localStorage.removeItem("startupReference");
+  localStorage.removeItem("startupPiece");
+  localStorage.removeItem("startupOF");
+  setStartupReference("F-1012");
+  setStartupPiece("");
+  setStartupOF("");
+  setShowProductionStart(false);
+  setCurrentUser(null);
+};
+
+async function fetchOpenTruck(reference) {
   if (!isSupabaseConfigured || !supabase) return null;
-
+  
   const { data, error } = await supabase
     .from("f1012_trucks")
     .select("*")
@@ -2717,40 +2816,32 @@ async function fetchNextTruckNumber(reference) {
   return (data?.truck_number || 0) + 1;
 }
 
-async function createTruck(reference, createdBy = "") {
-  const truckNumber = await fetchNextTruckNumber(reference);
+async function getActiveTruck(reference, createdBy = "") {
+  if (!isSupabaseConfigured || !supabase) return null;
 
-  const today = new Date().toISOString().slice(0, 10);
-
-  const { data, error } = await supabase
-    .from("f1012_trucks")
-    .insert({
-      reference,
-      truck_number: truckNumber,
-      planned_expedition_date: today,
-      status: "OPEN",
-      created_by: createdBy,
-    })
-    .select()
-    .single();
-
-  if (error) throw error;
-
-  return data;
+  return await getActiveTruckFromService(supabase, reference, createdBy);
 }
 
-async function getActiveTruck(reference, createdBy = "") {
-  let truck = await fetchOpenTruck(reference);
+async function updateTruckExpeditionDate(truckId, newDate) {
+  if (!isSupabaseConfigured || !supabase) return;
 
-  if (!truck) {
-    truck = await createTruck(reference, createdBy);
-  }
+  const updatedTruck = await updateTruckExpeditionDateFromService(
+    supabase,
+    truckId,
+    newDate
+  );
 
+  setActiveTruck(updatedTruck);
+
+  return updatedTruck;
+}
+
+
+async function refreshActiveTruck() {
+  const truck = await fetchOpenTruck(appConfig.reference);
+  setActiveTruck(truck);
   return truck;
 }
-
-
-};
 
   const confirmProductionStart = () => {
     const selectedReferenceData = getReferenceById(startupReference);
@@ -5300,8 +5391,11 @@ saveIncidentsUpdate(
     boxLabelsSummary={boxLabelsSummary}
     exportBoxLabelsExcel={exportBoxLabelsExcel}
     printBoxLabelsReport={printBoxLabelsReport}
+    activeTruck={activeTruck}
     appConfig={appConfig}
     truckProgress={truckProgress}
+    updateTruckExpeditionDate={updateTruckExpeditionDate}
+    closeActiveTruck={closeActiveTruck}
     onClose={() => setShowBoxLabelsModal(false)}
   />
 )}

@@ -6,22 +6,27 @@ export default function TruckListModal({
   appConfig,
   onClose,
   truckProgress,
+  activeTruck,
+  updateTruckExpeditionDate,
+  closeActiveTruck,
 }) {
-  
- const safeTruckProgress = truckProgress || {
-  completedBoxes: boxLabelsSummary.length,
-  targetBoxes: appConfig.boxesPerTruck || 49,
-  remainingBoxes: Math.max((appConfig.boxesPerTruck || 49) - boxLabelsSummary.length, 0),
-  percent:
-    appConfig.boxesPerTruck > 0
-      ? Math.min((boxLabelsSummary.length / appConfig.boxesPerTruck) * 100, 100)
-      : 0,
-  isComplete: boxLabelsSummary.length >= (appConfig.boxesPerTruck || 49),
-  lastBox:
-    boxLabelsSummary.length > 0
-      ? boxLabelsSummary[boxLabelsSummary.length - 1]
-      : null,
-};
+  const safeTruckProgress = truckProgress || {
+    completedBoxes: boxLabelsSummary.length,
+    targetBoxes: appConfig.boxesPerTruck || 49,
+    remainingBoxes: Math.max(
+      (appConfig.boxesPerTruck || 49) - boxLabelsSummary.length,
+      0
+    ),
+    percent:
+      appConfig.boxesPerTruck > 0
+        ? Math.min((boxLabelsSummary.length / appConfig.boxesPerTruck) * 100, 100)
+        : 0,
+    isComplete: boxLabelsSummary.length >= (appConfig.boxesPerTruck || 49),
+    lastBox:
+      boxLabelsSummary.length > 0
+        ? boxLabelsSummary[boxLabelsSummary.length - 1]
+        : null,
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
@@ -31,14 +36,6 @@ export default function TruckListModal({
             <h2 className="text-2xl font-black text-slate-900">
               Listado cajas camión · {appConfig.reference}
             </h2>
-
-            <p className="text-sm text-slate-500">
-              {boxLabels.length} líneas registradas
-            </p>
-
-            <p className="text-sm font-bold text-emerald-700">
-              {boxLabelsSummary.length} / {appConfig.boxesPerTruck} cajas completadas
-            </p>
           </div>
 
           <div className="flex gap-2">
@@ -59,11 +56,85 @@ export default function TruckListModal({
             </button>
 
             <button
+              onClick={closeActiveTruck}
+              disabled={!activeTruck}
+              className="rounded-xl bg-red-600 px-4 py-2 font-bold text-white disabled:bg-slate-300 hover:bg-red-700"
+            >
+              Cerrar camión
+            </button>
+
+            <button
               onClick={onClose}
               className="rounded-xl bg-slate-100 px-4 py-2 font-bold text-slate-700"
             >
               Cerrar
             </button>
+
+            <button
+              onClick={closeActiveTruck}
+              disabled={!activeTruck}
+              className="rounded-xl bg-orange-600 px-4 py-2 font-bold text-white hover:bg-orange-700 disabled:bg-slate-300"
+            >
+              🚚 Cerrar camión
+            </button>
+          </div>
+        </div>
+
+        <div className="mb-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <div className="grid gap-4 md:grid-cols-4">
+            <div>
+              <div className="text-xs font-bold uppercase text-slate-500">
+                Camión activo
+              </div>
+              <div className="text-xl font-black text-slate-900">
+                {activeTruck?.truck_number ?? "-"}
+              </div>
+            </div>
+
+            <div>
+              <div className="text-xs font-bold uppercase text-slate-500">
+                Referencia
+              </div>
+              <div className="text-xl font-black text-slate-900">
+                {appConfig.reference}
+              </div>
+            </div>
+
+            <div>
+              <div className="text-xs font-bold uppercase text-slate-500">
+                Fecha prevista
+              </div>
+              
+              <input
+                type="date"
+                value={activeTruck?.planned_expedition_date || ""}
+                disabled={!activeTruck}
+                onChange={(e) => {
+                  const newDate = e.target.value;
+                  
+                  if (!activeTruck?.id || !newDate) return;
+                  
+                  updateTruckExpeditionDate(activeTruck.id, newDate)
+                    .then(() => {
+                      alert("Fecha de expedición actualizada correctamente.");
+                    })
+                    .catch((error) => {
+                      console.error("Error actualizando fecha:", error);
+                      alert("No se ha podido actualizar la fecha de expedición.");
+                    });
+                  }}
+                  className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-lg font-black text-slate-900"
+                />
+              </div>
+
+            <div>
+              <div className="text-xs font-bold uppercase text-slate-500">
+                Cajas asociadas
+              </div>
+              <div className="text-xl font-black text-emerald-700">
+                {boxLabelsSummary.length} / {appConfig.boxesPerTruck}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -78,18 +149,18 @@ export default function TruckListModal({
                   Última caja: {safeTruckProgress.lastBox?.numeroCaja || "-"}
                 </div>
               </div>
-              
+
               <div
                 className={`rounded-full px-4 py-2 text-sm font-black ${
                   safeTruckProgress.isComplete
                     ? "bg-emerald-600 text-white"
                     : "bg-blue-700 text-white"
-                 }`}
+                }`}
               >
-                 {safeTruckProgress.isComplete ? "CAMIÓN COMPLETO" : "EN PREPARACIÓN"}
+                {safeTruckProgress.isComplete ? "CAMIÓN COMPLETO" : "EN PREPARACIÓN"}
               </div>
             </div>
-            
+
             <div className="mb-2 flex items-center justify-between text-sm font-bold text-blue-900">
               <span>
                 {safeTruckProgress.completedBoxes} / {safeTruckProgress.targetBoxes} cajas
@@ -98,7 +169,7 @@ export default function TruckListModal({
                 Faltan {safeTruckProgress.remainingBoxes} cajas
               </span>
             </div>
-            
+
             <div className="h-4 overflow-hidden rounded-full bg-white">
               <div
                 className={`h-full ${
@@ -124,9 +195,7 @@ export default function TruckListModal({
                     <th className="px-3 py-2 text-left">Fecha</th>
                     <th className="px-3 py-2 text-left">Operario</th>
                     <th className="px-3 py-2 text-right">Piezas</th>
-                    <th className="px-3 py-2 text-left">
-                      Combinaciones FAB/COL
-                    </th>
+                    <th className="px-3 py-2 text-left">Combinaciones FAB/COL</th>
                     <th className="px-3 py-2 text-right">Semana</th>
                     <th className="px-3 py-2 text-right">Día</th>
                   </tr>
@@ -134,27 +203,18 @@ export default function TruckListModal({
 
                 <tbody>
                   {boxLabelsSummary.map((box) => (
-                    <tr
-                      key={box.numeroCaja}
-                      className="border-t border-emerald-100"
-                    >
-                      <td className="px-3 py-2 font-black">
-                        {box.numeroCaja}
-                      </td>
+                    <tr key={box.numeroCaja} className="border-t border-emerald-100">
+                      <td className="px-3 py-2 font-black">{box.numeroCaja}</td>
                       <td className="px-3 py-2">{box.fecha}</td>
                       <td className="px-3 py-2">{box.operario}</td>
                       <td
                         className={`px-3 py-2 text-right font-black ${
-                          box.totalPiezas === 16
-                            ? "text-emerald-700"
-                            : "text-red-600"
+                          box.totalPiezas === 16 ? "text-emerald-700" : "text-red-600"
                         }`}
                       >
                         {box.totalPiezas}
                       </td>
-                      <td className="px-3 py-2">
-                        {box.combinaciones.join(" | ")}
-                      </td>
+                      <td className="px-3 py-2">{box.combinaciones.join(" | ")}</td>
                       <td className="px-3 py-2 text-right">{box.semana}</td>
                       <td className="px-3 py-2 text-right">{box.dia}</td>
                     </tr>
@@ -194,15 +254,11 @@ export default function TruckListModal({
                       {row.operario1}
                       {row.operario2 ? ` / ${row.operario2}` : ""}
                     </td>
-                    <td className="px-3 py-2 font-black">
-                      {row.numero_caja}
-                    </td>
+                    <td className="px-3 py-2 font-black">{row.numero_caja}</td>
                     <td className="px-3 py-2">{row.linea}</td>
                     <td className="px-3 py-2">{row.fabricacion}</td>
                     <td className="px-3 py-2">{row.colada}</td>
-                    <td className="px-3 py-2 text-right font-black">
-                      {row.cantidad}
-                    </td>
+                    <td className="px-3 py-2 text-right font-black">{row.cantidad}</td>
                     <td className="px-3 py-2 text-right">{row.semana}</td>
                     <td className="px-3 py-2 text-right">{row.dia}</td>
                   </tr>
@@ -214,9 +270,7 @@ export default function TruckListModal({
 
         <div className="mt-4 rounded-2xl bg-slate-50 p-4 text-sm text-slate-700">
           Cajas completas estimadas:{" "}
-          <strong>
-            {new Set(boxLabels.map((row) => row.numero_caja)).size}
-          </strong>{" "}
+          <strong>{new Set(boxLabels.map((row) => row.numero_caja)).size}</strong>{" "}
           / {appConfig.boxesPerTruck}
         </div>
       </div>
