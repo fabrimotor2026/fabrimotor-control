@@ -46,6 +46,7 @@ import {
   getActiveTruck as getActiveTruckFromService,
   updateTruckExpeditionDate as updateTruckExpeditionDateFromService,
   closeTruck as closeTruckFromService,
+  fetchTrucks as fetchTrucksFromService,
 } from "./services/truckService";
 
 const ACCESS_CODE = "1234";
@@ -758,7 +759,7 @@ async function saveBoxLabelToSupabase(labelData) {
       operario1: labelData.operario1,
       operario2: labelData.operario2 || "",
       numero_caja: labelData.numeroCaja,
-      camionId: activeTruck.id,
+      camion_id: labelData.camionId,
       linea: 2,
       fabricacion: labelData.fab2,
       colada: labelData.col2,
@@ -1124,6 +1125,12 @@ function isQualityDailyValidationEmpty(check) {
 }
 export default function App() {
   const [activeTruck, setActiveTruck] = useState(null);
+
+  const [trucks, setTrucks] = useState([]);
+  const [displayTruck, setDisplayTruck] = useState(null);
+
+  const [highlightBoxNumber, setHighlightBoxNumber] = useState("");
+
   const [appUsers, setAppUsers] = useState(() => getStoredUsers());
 
   const [adminSearch, setAdminSearch] = useState("");
@@ -2079,6 +2086,7 @@ ${error?.message || String(error)}`);
     operario2: labelForm.operario2,
     numeroCaja: numeroCajaCompleto,
 
+    camionId: truck.id,
     truckNumber: truck.truck_number,
     plannedExpeditionDate: truck.planned_expedition_date,
 
@@ -2769,8 +2777,11 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
   const openBoxLabelsModal = async () => {
   try {
     const truck = await refreshActiveTruck();
+
     const labels = await fetchBoxLabelsFromSupabase(truck?.id);
     setBoxLabels(labels);
+
+    await loadTrucksHistory();
 
     setShowBoxLabelsModal(true);
   } catch (error) {
@@ -2844,11 +2855,87 @@ async function updateTruckExpeditionDate(truckId, newDate) {
   return updatedTruck;
 }
 
+async function loadTrucksHistory() {
+  if (!isSupabaseConfigured || !supabase) {
+    console.log("No hay Supabase configurado");
+    return [];
+  }
+
+  const data = await fetchTrucksFromService(
+    supabase,
+    appConfig.reference
+  );
+
+  console.log("HISTÓRICO CAMIONES DESDE SUPABASE:", data);
+
+  setTrucks(data);
+
+  return data;
+}
 
 async function refreshActiveTruck() {
   const truck = await fetchOpenTruck(appConfig.reference);
   setActiveTruck(truck);
   return truck;
+}
+
+async function handleSelectTruck(truck) {
+  setDisplayTruck(truck);
+
+  const labels = await fetchBoxLabelsFromSupabase(truck.id);
+  setBoxLabels(labels);
+}
+
+async function handleSearchBox(boxNumber) {
+  const search = String(boxNumber || "").trim().toUpperCase();
+
+  if (!search) {
+    alert("Indica un número de caja.");
+    return;
+  }
+
+  const { data: boxRows, error: boxError } = await supabase
+    .from("f1012_box_labels")
+    .select("*")
+    .eq("numero_caja", search)
+    .limit(1);
+
+  if (boxError) {
+    console.error("Error buscando caja:", boxError);
+    alert("No se ha podido buscar la caja.");
+    return;
+  }
+
+  if (!boxRows || boxRows.length === 0) {
+    alert(`No se ha encontrado la caja ${search}.`);
+    return;
+  }
+
+  const box = boxRows[0];
+
+  if (!box.camion_id) {
+    alert("La caja existe, pero no tiene camión asociado.");
+    return;
+  }
+
+  const { data: truck, error: truckError } = await supabase
+    .from("f1012_trucks")
+    .select("*")
+    .eq("id", box.camion_id)
+    .single();
+
+  if (truckError) {
+    console.error("Error buscando camión:", truckError);
+    alert("No se ha podido localizar el camión de esta caja.");
+    return;
+  }
+
+  setDisplayTruck(truck);
+
+  const labels = await fetchBoxLabelsFromSupabase(truck.id);
+  setBoxLabels(labels);
+
+  setHighlightBoxNumber(search);
 }
 
   const confirmProductionStart = () => {
@@ -5395,17 +5482,23 @@ saveIncidentsUpdate(
 
 {showBoxLabelsModal && (
   <TruckListModal
-    boxLabels={boxLabels}
-    boxLabelsSummary={boxLabelsSummary}
-    exportBoxLabelsExcel={exportBoxLabelsExcel}
-    printBoxLabelsReport={printBoxLabelsReport}
-    activeTruck={activeTruck}
-    appConfig={appConfig}
-    truckProgress={truckProgress}
-    updateTruckExpeditionDate={updateTruckExpeditionDate}
-    closeActiveTruck={closeActiveTruck}
-    onClose={() => setShowBoxLabelsModal(false)}
-  />
+  boxLabels={boxLabels}
+  boxLabelsSummary={boxLabelsSummary}
+  exportBoxLabelsExcel={exportBoxLabelsExcel}
+  printBoxLabelsReport={printBoxLabelsReport}
+  activeTruck={activeTruck}
+  displayTruck={displayTruck}
+  selectedTruckId={displayTruck?.id || activeTruck?.id}
+  trucks={trucks}
+  appConfig={appConfig}
+  truckProgress={truckProgress}
+  updateTruckExpeditionDate={updateTruckExpeditionDate}
+  closeActiveTruck={closeActiveTruck}
+  onSelectTruck={handleSelectTruck}
+  onSearchBox={handleSearchBox}
+  highlightBoxNumber={highlightBoxNumber}
+  onClose={() => setShowBoxLabelsModal(false)}
+/>
 )}
 
       {showRejectsModal && (

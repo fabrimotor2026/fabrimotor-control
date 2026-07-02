@@ -77,6 +77,7 @@ export async function closeTruck(supabase, truckId) {
     .from("f1012_trucks")
     .update({
       status: "CLOSED",
+      closed_at: new Date().toISOString(),
     })
     .eq("id", truckId)
     .select()
@@ -85,4 +86,16 @@ export async function closeTruck(supabase, truckId) {
   if (error) throw error;
 
   return data;
+}
+
+export async function fetchTrucks(supabase, reference) {
+  const { data, error } = await supabase
+    .from("f1012_trucks")
+    .select("*")
+    .eq("reference", reference)
+    .order("truck_number", { ascending: false });
+
+  if (error) throw error;
+
+  return data || [];
 }
