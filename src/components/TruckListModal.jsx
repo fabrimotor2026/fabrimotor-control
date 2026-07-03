@@ -57,14 +57,137 @@ export default function TruckListModal({
   ).size,
 };
 
+const dashboardStats = {
+  totalTrucks: trucks.length,
+  openTrucks: trucks.filter((truck) => truck.status === "OPEN").length,
+  closedTrucks: trucks.filter((truck) => truck.status === "CLOSED").length,
+  totalBoxes: truckStats.cajas,
+  totalPieces: truckStats.piezas,
+  lastBox:
+  boxLabelsSummary.length > 0
+    ? boxLabelsSummary[boxLabelsSummary.length - 1].numeroCaja
+    : "-",
+};
+
   
   const [boxSearch, setBoxSearch] = useState("");
   const [selectedBox, setSelectedBox] = useState(null);
+  const scrollToBoxes = () => {
+  document
+    .getElementById("box-summary-section")
+    ?.scrollIntoView({ behavior: "smooth" });
+};
+
+const openLastBox = () => {
+  const box = boxLabelsSummary.find(
+    (b) => b.numeroCaja === dashboardStats.lastBox
+  );
+
+  if (box) {
+    setSelectedBox(box);
+  }
+};
+
+const dashboardCardClass =
+  "cursor-pointer rounded-2xl p-4 text-center shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-xl active:scale-95";
     
 
   return (
   <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
     <div className="max-h-[90vh] w-full max-w-7xl overflow-auto rounded-3xl bg-white p-6 shadow-2xl">
+
+      <div className="mb-5 rounded-2xl border border-blue-200 bg-blue-50 p-4">
+  <div className="mb-4 text-lg font-black text-blue-900">
+    📈 Dashboard de expediciones
+  </div>
+
+  <div className="mb-3 text-sm font-black uppercase text-blue-800">
+    🌍 Resumen general
+  </div>
+
+  <div className="grid gap-4 md:grid-cols-3">
+    <div className={`${dashboardCardClass} bg-blue-100`}>
+      <div className="text-xs font-bold uppercase text-slate-500">🚚 Camiones</div>
+      <div className="mt-1 text-3xl font-black text-slate-900">
+        {dashboardStats.totalTrucks}
+      </div>
+    </div>
+
+<div className={`${dashboardCardClass} bg-emerald-100`}>
+  <div className="text-xs font-bold uppercase text-slate-500">
+    🟢 Abiertos
+  </div>
+
+  <div className="mt-1 text-3xl font-black text-emerald-700">
+    {dashboardStats.openTrucks}
+  </div>
+</div>
+
+    <div className={`${dashboardCardClass} bg-slate-200`}>
+      <div className="text-xs font-bold uppercase text-slate-500">⚫ Cerrados</div>
+      <div className="mt-1 text-3xl font-black text-slate-700">
+        {dashboardStats.closedTrucks}
+      </div>
+    </div>
+  </div>
+<div className="mb-3 mt-6 text-sm font-black uppercase text-blue-800">
+  🚚 Camión seleccionado
+</div>
+
+<div className="grid gap-4 md:grid-cols-4">
+
+  <div
+  onClick={scrollToBoxes}
+  className={`${dashboardCardClass} bg-amber-100`}
+>
+  <div className="text-xs font-bold uppercase text-slate-500">
+    📦 Cajas
+  </div>
+
+  <div className="mt-1 text-3xl font-black text-slate-900">
+    {truckStats.cajas}
+  </div>
+</div>
+
+    <div className={`${dashboardCardClass} bg-violet-100`}>
+      <div className="text-xs font-bold uppercase text-slate-500">🧩 Piezas</div>
+      <div className="mt-1 text-3xl font-black text-slate-900">{truckStats.piezas}</div>
+    </div>
+
+    <div className={`${dashboardCardClass} bg-orange-100`}>
+      <div className="text-xs font-bold uppercase text-slate-500">📋 Líneas</div>
+      <div className="mt-1 text-3xl font-black text-slate-900">{truckStats.lineas}</div>
+    </div>
+
+    <div className={`${dashboardCardClass} bg-teal-100`}>
+      <div className="text-xs font-bold uppercase text-slate-500">👥 Operarios</div>
+      <div className="mt-1 text-3xl font-black text-slate-900">{truckStats.operarios}</div>
+    </div>
+
+    <div className={`${dashboardCardClass} bg-rose-100`}>
+      <div className="text-xs font-bold uppercase text-slate-500">🏭 Fabricaciones</div>
+      <div className="mt-1 text-3xl font-black text-slate-900">{truckStats.fabricaciones}</div>
+    </div>
+
+    <div className={`${dashboardCardClass} bg-indigo-100`}>
+      <div className="text-xs font-bold uppercase text-slate-500">🔩 Coladas</div>
+      <div className="mt-1 text-3xl font-black text-slate-900">{truckStats.coladas}</div>
+    </div>
+    
+      <div
+        onClick={openLastBox}
+        className={`${dashboardCardClass} bg-cyan-100`}
+      >
+        <div className="text-xs font-bold uppercase text-slate-500">
+          Última caja
+        </div>
+        
+        <div className="mt-1 text-2xl font-black text-slate-900">
+          {dashboardStats.lastBox}
+        </div>
+      </div>
+    </div>
+  </div>
 
       <div className="mb-5 grid gap-5 lg:grid-cols-[280px_1fr]">
 
@@ -347,8 +470,13 @@ export default function TruckListModal({
         </div>
       </div>
 
+
+
         {boxLabelsSummary.length > 0 && (
-          <div className="mb-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+          <div
+            id="box-summary-section"
+            className="mb-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4"
+          >
             <div className="mb-3 text-lg font-black text-emerald-900">
               Resumen por caja ({boxLabelsSummary.length})
             </div>
@@ -448,6 +576,7 @@ export default function TruckListModal({
 {selectedBox && (
   <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4">
     <div className="max-h-[90vh] w-full max-w-2xl overflow-auto rounded-3xl bg-white p-6 shadow-2xl">
+      
       <div className="mb-5 flex items-start justify-between gap-4">
         <div>
           <div className="text-sm font-black uppercase tracking-wide text-slate-500">
