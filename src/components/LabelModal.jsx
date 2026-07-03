@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 export default function LabelModal({
   labelForm,
   setLabelForm,
@@ -6,11 +8,22 @@ export default function LabelModal({
   numeroDia,
   printBoxLabel,
   appConfig,
+  operatorUsers = [],
   onClose,
 }) {
+
+  const operatorUsers2 = operatorUsers.filter(
+  (user) => user.username !== labelForm.operario1
+);
+
+const [showSecondOperator, setShowSecondOperator] = useState(
+  !!labelForm.operario2
+);
+  
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div className="max-h-[90vh] w-full max-w-6xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl">
+        
 
         <div className="mb-6 flex items-center justify-between">
           <h2 className="text-2xl font-black">
@@ -117,31 +130,87 @@ export default function LabelModal({
           </div>
 
           <div className="mt-4 grid gap-3 md:grid-cols-2">
-            <input
-              className="input"
-              placeholder="Operario 1 (4 cifras)"
-              value={labelForm.operario1}
-              maxLength={4}
-              onChange={(e) =>
-                setLabelForm({
-                  ...labelForm,
-                  operario1: e.target.value,
-                })
-              }
-            />
+            <label className="block text-left">
+              <span className="mb-1 block text-sm font-black text-slate-700">
+                👤 Operario 1
+              </span>
+              
+              <select
+                className="input"
+                value={labelForm.operario1}
+                onChange={(e) => {
+                  const nuevoOperario1 = e.target.value;
+                  
+                  setLabelForm({
+                    ...labelForm,
+                    operario1: nuevoOperario1,
+                    operario2:
+                      labelForm.operario2 === nuevoOperario1
+                        ? ""
+                        : labelForm.operario2,
+                  });
+                }}
+              >
 
-            <input
-              className="input"
-              placeholder="Operario 2 (opcional)"
-              value={labelForm.operario2}
-              maxLength={4}
-              onChange={(e) =>
-                setLabelForm({
-                  ...labelForm,
-                  operario2: e.target.value,
-                })
-              }
-            />
+                <option value="">Seleccionar operario</option>
+                {operatorUsers.map((user) => (
+                  <option key={user.username} value={user.username}>
+                    {user.username} · {user.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            
+            {showSecondOperator ? (
+  <label className="block text-left">
+    <span className="mb-1 block text-sm font-black text-slate-700">
+      👥 Operario 2 opcional
+    </span>
+
+    <select
+      className="input"
+      value={labelForm.operario2}
+      onChange={(e) =>
+        setLabelForm({
+          ...labelForm,
+          operario2: e.target.value,
+        })
+      }
+    >
+      <option value="">Sin segundo operario</option>
+
+      {operatorUsers2.map((user) => (
+        <option key={user.username} value={user.username}>
+          {user.username} · {user.name}
+        </option>
+      ))}
+    </select>
+
+    <button
+      type="button"
+      className="mt-2 text-sm font-bold text-red-600 hover:underline"
+      onClick={() => {
+        setShowSecondOperator(false);
+        setLabelForm({
+          ...labelForm,
+          operario2: "",
+        });
+      }}
+    >
+      Quitar segundo operario
+    </button>
+  </label>
+) : (
+  <div className="flex items-end">
+    <button
+      type="button"
+      className="w-full rounded-xl border-2 border-dashed border-slate-300 py-3 font-black text-slate-600 transition hover:border-emerald-500 hover:text-emerald-600"
+      onClick={() => setShowSecondOperator(true)}
+    >
+      ➕ Añadir segundo operario
+    </button>
+  </div>
+)}
           </div>
 
           <div className="mt-4">

@@ -1287,6 +1287,11 @@ async function updateTruckExpeditionDate(truckId, newDate) {
     7
   );
   
+  const operatorUsers = USERS
+  .filter((user) => user.role === "Operario")
+  .sort((a, b) => String(a.username).localeCompare(String(b.username)));
+
+  
   const numeroDia =
     fechaEtiqueta.getDay() === 0
       ? 7
@@ -5455,6 +5460,7 @@ saveIncidentsUpdate(
 </div>
 )}
 
+
 {showConfigModal && (
   <ConfigModal
     appConfig={appConfig}
@@ -5467,17 +5473,20 @@ saveIncidentsUpdate(
   />
 )}
 
-{showLabelModal && (
+
+
+{showLabelModal && ( 
   <LabelModal
-    labelForm={labelForm}
-    setLabelForm={setLabelForm}
-    totalCaja={totalCaja}
-    numeroSemana={numeroSemana}
-    numeroDia={numeroDia}
-    printBoxLabel={printBoxLabel}
-    appConfig={appConfig}
-    onClose={() => setShowLabelModal(false)}
-  />
+  labelForm={labelForm}
+  setLabelForm={setLabelForm}
+  totalCaja={totalCaja}
+  numeroSemana={numeroSemana}
+  numeroDia={numeroDia}
+  printBoxLabel={printBoxLabel}
+  appConfig={appConfig}
+  operatorUsers={operatorUsers}
+  onClose={() => setShowLabelModal(false)}
+/>
 )}
 
 {showBoxLabelsModal && (
@@ -6048,6 +6057,10 @@ function RejectsModal({ records, getRejectedChecks, buildSheetName, onClose }) {
         .toLowerCase()
         .includes(rejectPieza.toLowerCase());
     const matchMaquina = !rejectMaquina || record.maquina === rejectMaquina;
+
+    const operatorUsers = users
+      .filter((user) => user.role === "Operario")
+      .sort((a, b) => String(a.username).localeCompare(String(b.username)));
 
     return (
       matchFrom &&
