@@ -1291,7 +1291,7 @@ async function updateTruckExpeditionDate(truckId, newDate) {
   .filter((user) => user.role === "Operario")
   .sort((a, b) => String(a.username).localeCompare(String(b.username)));
 
-  
+
   const numeroDia =
     fechaEtiqueta.getDay() === 0
       ? 7
@@ -5477,16 +5477,17 @@ saveIncidentsUpdate(
 
 {showLabelModal && ( 
   <LabelModal
-  labelForm={labelForm}
-  setLabelForm={setLabelForm}
-  totalCaja={totalCaja}
-  numeroSemana={numeroSemana}
-  numeroDia={numeroDia}
-  printBoxLabel={printBoxLabel}
-  appConfig={appConfig}
-  operatorUsers={operatorUsers}
-  onClose={() => setShowLabelModal(false)}
-/>
+    labelForm={labelForm}
+    setLabelForm={setLabelForm}
+    totalCaja={totalCaja}
+    numeroSemana={numeroSemana}
+    numeroDia={numeroDia}
+    printBoxLabel={printBoxLabel}
+    appConfig={appConfig}
+    operatorUsers={operatorUsers}
+    currentUser={currentUser}
+    onClose={() => setShowLabelModal(false)}
+  />  
 )}
 
 {showBoxLabelsModal && (

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function LabelModal({
   labelForm,
@@ -9,6 +9,7 @@ export default function LabelModal({
   printBoxLabel,
   appConfig,
   operatorUsers = [],
+  currentUser,
   onClose,
 }) {
 
@@ -19,6 +20,18 @@ export default function LabelModal({
 const [showSecondOperator, setShowSecondOperator] = useState(
   !!labelForm.operario2
 );
+
+useEffect(() => {
+  if (
+    currentUser?.role === "Operario" &&
+    !labelForm.operario1
+  ) {
+    setLabelForm({
+      ...labelForm,
+      operario1: currentUser.username,
+    });
+  }
+}, [currentUser, labelForm, setLabelForm]);
   
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
