@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+
 export default function TruckListModal({
   boxLabels,
   boxLabelsSummary,
@@ -9,7 +10,6 @@ export default function TruckListModal({
   truckProgress,
   activeTruck,
   trucks = [],
-  updateTruckExpeditionDate,
   closeActiveTruck,
   displayTruck,
   selectedTruckId,
@@ -17,294 +17,87 @@ export default function TruckListModal({
   onSearchBox,
   highlightBoxNumber,
 }) {
-  const safeTruckProgress = truckProgress || {
-    completedBoxes: boxLabelsSummary.length,
-    targetBoxes: appConfig.boxesPerTruck || 49,
-    remainingBoxes: Math.max(
-      (appConfig.boxesPerTruck || 49) - boxLabelsSummary.length,
-      0
-    ),
-    percent:
-      appConfig.boxesPerTruck > 0
-        ? Math.min((boxLabelsSummary.length / appConfig.boxesPerTruck) * 100, 100)
-        : 0,
-    isComplete: boxLabelsSummary.length >= (appConfig.boxesPerTruck || 49),
-    lastBox:
-      boxLabelsSummary.length > 0
-        ? boxLabelsSummary[boxLabelsSummary.length - 1]
-        : null,
-  };
-
-  
-  
   const currentTruck = displayTruck || activeTruck;
   const selectedId = String(selectedTruckId || currentTruck?.id || "");
+  const capacity = Number(appConfig.boxesPerTruck || 49);
 
-  const truckStats = {
-  lineas: boxLabels.length,
-  cajas: new Set(boxLabels.map((row) => row.numero_caja).filter(Boolean)).size,
-  piezas: boxLabels.reduce((sum, row) => sum + Number(row.cantidad || 0), 0),
-  operarios: new Set(
-    boxLabels
-      .flatMap((row) => [row.operario1, row.operario2])
-      .filter(Boolean)
-  ).size,
-  fabricaciones: new Set(
-    boxLabels.map((row) => row.fabricacion).filter(Boolean)
-  ).size,
-  coladas: new Set(
-    boxLabels.map((row) => row.colada).filter(Boolean)
-  ).size,
-};
+  const safeTruckProgress = truckProgress || {
+    completedBoxes: boxLabelsSummary.length,
+    targetBoxes: capacity,
+    remainingBoxes: Math.max(capacity - boxLabelsSummary.length, 0),
+    percent: capacity > 0 ? Math.min((boxLabelsSummary.length / capacity) * 100, 100) : 0,
+    isComplete: boxLabelsSummary.length >= capacity,
+    lastBox: boxLabelsSummary.length > 0 ? boxLabelsSummary[boxLabelsSummary.length - 1] : null,
+  };
 
-const dashboardStats = {
-  totalTrucks: trucks.length,
-  openTrucks: trucks.filter((truck) => truck.status === "OPEN").length,
-  closedTrucks: trucks.filter((truck) => truck.status === "CLOSED").length,
-  totalBoxes: truckStats.cajas,
-  totalPieces: truckStats.piezas,
-  lastBox:
-  boxLabelsSummary.length > 0
-    ? boxLabelsSummary[boxLabelsSummary.length - 1].numeroCaja
-    : "-",
-};
-
-  
-  const [boxSearch, setBoxSearch] = useState("");
-  const [selectedBox, setSelectedBox] = useState(null);
-  const scrollToBoxes = () => {
-  document
-    .getElementById("box-summary-section")
-    ?.scrollIntoView({ behavior: "smooth" });
-};
-
-const openLastBox = () => {
-  const box = boxLabelsSummary.find(
-    (b) => b.numeroCaja === dashboardStats.lastBox
+  const truckStats = useMemo(
+    () => ({
+      lineas: boxLabels.length,
+      cajas: new Set(boxLabels.map((row) => row.numero_caja).filter(Boolean)).size,
+      piezas: boxLabels.reduce((sum, row) => sum + Number(row.cantidad || 0), 0),
+      operarios: new Set(
+        boxLabels.flatMap((row) => [row.operario1, row.operario2]).filter(Boolean)
+      ).size,
+      fabricaciones: new Set(boxLabels.map((row) => row.fabricacion).filter(Boolean)).size,
+      coladas: new Set(boxLabels.map((row) => row.colada).filter(Boolean)).size,
+    }),
+    [boxLabels]
   );
 
-  if (box) {
-    setSelectedBox(box);
-  }
-};
+  const [boxSearch, setBoxSearch] = useState("");
+  const [selectedBox, setSelectedBox] = useState(null);
 
-const dashboardCardClass =
-  "cursor-pointer rounded-2xl p-4 text-center shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-xl active:scale-95";
-    
+  useEffect(() => {
+    if (!selectedBox && boxLabelsSummary.length > 0) {
+      setSelectedBox(boxLabelsSummary[boxLabelsSummary.length - 1]);
+    }
+  }, [boxLabelsSummary, selectedBox]);
+
+  useEffect(() => {
+    const target = String(highlightBoxNumber || "").trim().toUpperCase();
+    if (!target) return;
+    const found = boxLabelsSummary.find(
+      (box) => String(box.numeroCaja || "").trim().toUpperCase() === target
+    );
+    if (found) setSelectedBox(found);
+  }, [highlightBoxNumber, boxLabelsSummary]);
+
+  const boxesByNumber = useMemo(() => {
+    const map = new Map();
+    boxLabelsSummary.forEach((box) => map.set(String(box.numeroCaja), box));
+    return map;
+  }, [boxLabelsSummary]);
+
+  const gridColumns = Math.max(5, Math.ceil(Math.sqrt(capacity)));
+  const positions = Array.from({ length: capacity }, (_, index) => boxLabelsSummary[index] || null);
+
+  const selectedBoxNumber = selectedBox?.numeroCaja ? String(selectedBox.numeroCaja) : "";
+
+  const kpiClass = "rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm";
 
   return (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-    <div className="max-h-[90vh] w-full max-w-7xl overflow-auto rounded-3xl bg-white p-6 shadow-2xl">
-
-      <div className="mb-5 rounded-2xl border border-blue-200 bg-blue-50 p-4">
-  <div className="mb-4 text-lg font-black text-blue-900">
-    📈 Dashboard de expediciones
-  </div>
-
-  <div className="mb-3 text-sm font-black uppercase text-blue-800">
-    🌍 Resumen general
-  </div>
-
-  <div className="grid gap-4 md:grid-cols-3">
-    <div className={`${dashboardCardClass} bg-blue-100`}>
-      <div className="text-xs font-bold uppercase text-slate-500">🚚 Camiones</div>
-      <div className="mt-1 text-3xl font-black text-slate-900">
-        {dashboardStats.totalTrucks}
-      </div>
-    </div>
-
-<div className={`${dashboardCardClass} bg-emerald-100`}>
-  <div className="text-xs font-bold uppercase text-slate-500">
-    🟢 Abiertos
-  </div>
-
-  <div className="mt-1 text-3xl font-black text-emerald-700">
-    {dashboardStats.openTrucks}
-  </div>
-</div>
-
-    <div className={`${dashboardCardClass} bg-slate-200`}>
-      <div className="text-xs font-bold uppercase text-slate-500">⚫ Cerrados</div>
-      <div className="mt-1 text-3xl font-black text-slate-700">
-        {dashboardStats.closedTrucks}
-      </div>
-    </div>
-  </div>
-<div className="mb-3 mt-6 text-sm font-black uppercase text-blue-800">
-  🚚 Camión seleccionado
-</div>
-
-<div className="grid gap-4 md:grid-cols-4">
-
-  <div
-  onClick={scrollToBoxes}
-  className={`${dashboardCardClass} bg-amber-100`}
->
-  <div className="text-xs font-bold uppercase text-slate-500">
-    📦 Cajas
-  </div>
-
-  <div className="mt-1 text-3xl font-black text-slate-900">
-    {truckStats.cajas}
-  </div>
-</div>
-
-    <div className={`${dashboardCardClass} bg-violet-100`}>
-      <div className="text-xs font-bold uppercase text-slate-500">🧩 Piezas</div>
-      <div className="mt-1 text-3xl font-black text-slate-900">{truckStats.piezas}</div>
-    </div>
-
-    <div className={`${dashboardCardClass} bg-orange-100`}>
-      <div className="text-xs font-bold uppercase text-slate-500">📋 Líneas</div>
-      <div className="mt-1 text-3xl font-black text-slate-900">{truckStats.lineas}</div>
-    </div>
-
-    <div className={`${dashboardCardClass} bg-teal-100`}>
-      <div className="text-xs font-bold uppercase text-slate-500">👥 Operarios</div>
-      <div className="mt-1 text-3xl font-black text-slate-900">{truckStats.operarios}</div>
-    </div>
-
-    <div className={`${dashboardCardClass} bg-rose-100`}>
-      <div className="text-xs font-bold uppercase text-slate-500">🏭 Fabricaciones</div>
-      <div className="mt-1 text-3xl font-black text-slate-900">{truckStats.fabricaciones}</div>
-    </div>
-
-    <div className={`${dashboardCardClass} bg-indigo-100`}>
-      <div className="text-xs font-bold uppercase text-slate-500">🔩 Coladas</div>
-      <div className="mt-1 text-3xl font-black text-slate-900">{truckStats.coladas}</div>
-    </div>
-    
-      <div
-        onClick={openLastBox}
-        className={`${dashboardCardClass} bg-cyan-100`}
-      >
-        <div className="text-xs font-bold uppercase text-slate-500">
-          Última caja
-        </div>
-        
-        <div className="mt-1 text-2xl font-black text-slate-900">
-          {dashboardStats.lastBox}
-        </div>
-      </div>
-    </div>
-  </div>
-
-      <div className="mb-5 grid gap-5 lg:grid-cols-[280px_1fr]">
-
-  {/* PANEL IZQUIERDO */}
-
-  <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-
-    <div className="mb-4">
-      <div className="text-sm font-black uppercase tracking-wide text-slate-500">
-        Expediciones
-      </div>
-
-      <div className="text-xl font-black text-slate-900">
-        Histórico
-      </div>
-    </div>
-
-    {/* BUSCADOR */}
-
-    <div className="mb-4 rounded-2xl border border-slate-200 bg-slate-50 p-3">
-      <div className="mb-2 text-xs font-black uppercase text-slate-500">
-        🔍 Buscar caja
-      </div>
-
-      <div className="flex gap-2">
-        <input
-          value={boxSearch}
-          onChange={(e) => setBoxSearch(e.target.value)}
-          placeholder="FB-26-00001"
-          className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm font-bold"
-        />
-
-        <button
-          type="button"
-          onClick={() => onSearchBox(boxSearch)}
-          className="rounded-xl bg-blue-700 px-3 py-2 font-black text-white"
-        >
-          🔎
-        </button>
-      </div>
-    </div>
-
-    {/* HISTÓRICO */}
-
-    <div className="space-y-3">
-
-      {trucks.map((truck) => {
-        const isSelected = String(truck.id) === selectedId;
-
-        return (
-          <div
-            key={truck.id}
-            onClick={() => onSelectTruck(truck)}
-            className={`cursor-pointer rounded-2xl border-4 p-3 transition-all duration-200 hover:shadow-lg ${
-              isSelected
-                ? truck.status === "OPEN"
-                  ? "border-emerald-700 bg-emerald-200 shadow-xl ring-4 ring-emerald-300"
-                  : "border-blue-800 bg-blue-200 shadow-xl ring-4 ring-blue-300"
-                : truck.status === "OPEN"
-                  ? "border-emerald-300 bg-emerald-50"
-                  : "border-slate-200 bg-slate-50"
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <div className="text-lg font-black text-slate-900">
-                🚚 Camión {truck.truck_number}
-              </div>
-
-              <div
-                className={`rounded-full px-2 py-1 text-[11px] font-black ${
-                  truck.status === "OPEN"
-                    ? "bg-emerald-600 text-white"
-                    : "bg-slate-500 text-white"
-                }`}
-              >
-                {truck.status}
-              </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4">
+      <div className="flex h-[92vh] w-[94vw] max-w-none flex-col overflow-hidden rounded-[2rem] bg-white shadow-2xl ring-1 ring-slate-200">
+        <div className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-slate-50 px-6 py-4">
+          <div>
+            <div className="text-xs font-black uppercase tracking-[0.22em] text-slate-500">
+              RC1-002 · Workspace camión sin scroll
             </div>
-
-            <div className="mt-2 text-xs font-bold text-slate-600">
-              Fecha prevista
-            </div>
-
-            <div className="text-sm font-black text-slate-900">
-              {truck.planned_expedition_date || "-"}
+            <h2 className="mt-1 text-3xl font-black text-slate-950">
+              🚚 Camión {currentTruck?.truck_number ?? "-"}
+            </h2>
+            <div className="mt-1 text-sm font-bold text-slate-600">
+              Referencia {appConfig.reference} · {boxLabelsSummary.length} / {capacity} cajas
             </div>
           </div>
-        );
-      })}
 
-    </div>
-
-  </div>
-
-  {/* PANEL DERECHO */}
-
-        <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
-          <div className="mb-4 flex items-start justify-between gap-4">
-            <div>
-              <div className="text-sm font-black uppercase tracking-wide text-slate-500">
-                Gestión de expedición
-              </div>
-
-              <h2 className="mt-1 text-3xl font-black text-slate-900">
-                🚚 Camión {currentTruck?.truck_number ?? "-"}
-              </h2>
-
-              <div className="mt-2 text-sm font-bold text-slate-600">
-                Referencia {appConfig.reference}
-              </div>
-            </div>     
+          <div className="flex items-center gap-3">
             <div
-              className={`rounded-full px-4 py-2 text-sm font-black ${
-                safeTruckProgress.isComplete
-                  ? "bg-emerald-600 text-white"
-                  : currentTruck?.status === "CLOSED"
-                    ? "bg-slate-600 text-white"
+              className={`rounded-2xl px-4 py-2 text-sm font-black ${
+                currentTruck?.status === "CLOSED"
+                  ? "bg-slate-700 text-white"
+                  : safeTruckProgress.isComplete
+                    ? "bg-emerald-600 text-white"
                     : "bg-blue-700 text-white"
               }`}
             >
@@ -312,141 +105,289 @@ const dashboardCardClass =
                 ? "CERRADO"
                 : safeTruckProgress.isComplete
                   ? "CAMIÓN COMPLETO"
-                  : "EN PREPARACIÓN"}
+                  : "EN CARGA"}
             </div>
-          </div>
-
-{/* BLOQUE 1: INFORMACIÓN DEL CAMIÓN */}
-<div className="mt-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-  <div className="mb-4 flex items-center justify-between">
-    <h3 className="text-lg font-black text-slate-900">
-      ℹ Información del camión
-    </h3>
-  </div>
-
-  <div className="grid gap-y-3 md:grid-cols-2">
-    <div>
-      <div className="text-xs font-bold uppercase text-slate-500">
-        👤 Creado por
-      </div>
-      <div className="font-black text-slate-900">
-        {currentTruck?.created_by || "-"}
-      </div>
-    </div>
-
-    <div>
-      <div className="text-xs font-bold uppercase text-slate-500">
-        📅 Fecha creación
-      </div>
-      <div className="font-black text-slate-900">
-        {currentTruck?.created_at
-          ? new Date(currentTruck.created_at).toLocaleString("es-ES")
-          : "-"}
-      </div>
-    </div>
-
-    <div>
-      <div className="text-xs font-bold uppercase text-slate-500">
-        🏁 Fecha cierre
-      </div>
-      <div className="font-black text-slate-900">
-        {currentTruck?.closed_at
-          ? new Date(currentTruck.closed_at).toLocaleString("es-ES")
-          : currentTruck?.status === "CLOSED"
-            ? "No registrada"
-            : "Pendiente"}
-      </div>
-    </div>
-
-    <div>
-      <div className="text-xs font-bold uppercase text-slate-500">
-        🚚 Nº Camión
-      </div>
-      <div className="font-black text-slate-900">
-        {currentTruck?.truck_number || "-"}
-      </div>
-    </div>
-  </div>
-</div>
-
-{/* BLOQUE 2: RESUMEN DE TRAZABILIDAD */}
-<div className="mt-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-  <div className="mb-4 flex items-center justify-between">
-    <h3 className="text-lg font-black text-slate-900">
-      📊 Resumen de trazabilidad
-    </h3>
-  </div>
-
-  <div className="grid gap-4 md:grid-cols-3">
-    <div className="rounded-2xl bg-slate-50 p-4 text-center">
-      <div className="text-xs font-bold uppercase text-slate-500">📦 Cajas</div>
-      <div className="mt-1 text-3xl font-black text-slate-900">{truckStats.cajas}</div>
-    </div>
-
-    <div className="rounded-2xl bg-slate-50 p-4 text-center">
-      <div className="text-xs font-bold uppercase text-slate-500">🧩 Piezas</div>
-      <div className="mt-1 text-3xl font-black text-slate-900">{truckStats.piezas}</div>
-    </div>
-
-    <div className="rounded-2xl bg-slate-50 p-4 text-center">
-      <div className="text-xs font-bold uppercase text-slate-500">📋 Líneas</div>
-      <div className="mt-1 text-3xl font-black text-slate-900">{truckStats.lineas}</div>
-    </div>
-
-    <div className="rounded-2xl bg-slate-50 p-4 text-center">
-      <div className="text-xs font-bold uppercase text-slate-500">👥 Operarios</div>
-      <div className="mt-1 text-3xl font-black text-slate-900">{truckStats.operarios}</div>
-    </div>
-
-    <div className="rounded-2xl bg-slate-50 p-4 text-center">
-      <div className="text-xs font-bold uppercase text-slate-500">🏭 Fabricaciones</div>
-      <div className="mt-1 text-3xl font-black text-slate-900">{truckStats.fabricaciones}</div>
-    </div>
-
-    <div className="rounded-2xl bg-slate-50 p-4 text-center">
-      <div className="text-xs font-bold uppercase text-slate-500">🔩 Coladas</div>
-      <div className="mt-1 text-3xl font-black text-slate-900">{truckStats.coladas}</div>
-    </div>
-  </div>
-</div>
-          <div className="mt-5">
-            <div className="mb-2 flex items-center justify-between text-sm font-bold text-slate-700">
-              <span>Progreso expedición</span>
-              <span>{Math.round(safeTruckProgress.percent)} %</span>
-            </div>
-
-            <div className="h-5 overflow-hidden rounded-full bg-white">
-              <div
-                className={`h-full ${
-                  safeTruckProgress.isComplete ? "bg-emerald-600" : "bg-blue-600"
-                }`}
-                style={{ width: `${safeTruckProgress.percent}%` }}
-              />
-            </div>
-
-            <div className="mt-2 text-sm font-bold text-slate-600">
-              Faltan {safeTruckProgress.remainingBoxes} cajas ·{" "}
-              {safeTruckProgress.remainingBoxes * appConfig.piecesPerBox} piezas
-            </div>
-          </div>
-
-          <div className="mt-5 flex flex-wrap gap-2">
             <button
-              onClick={exportBoxLabelsExcel}
-              disabled={boxLabels.length === 0}
-              className="rounded-xl bg-green-600 px-4 py-2 font-bold text-white disabled:bg-slate-300"
+              onClick={onClose}
+              className="rounded-2xl bg-slate-900 px-5 py-3 font-black text-white transition hover:bg-slate-700"
             >
-              Exportar Excel
+              Salir
             </button>
+          </div>
+        </div>
 
+        <div className="shrink-0 border-b border-slate-200 bg-white px-6 py-4">
+          <div className="grid gap-3 xl:grid-cols-7">
+            <div className={kpiClass}>
+              <div className="text-xs font-black uppercase text-slate-500">Ocupación</div>
+              <div className="mt-1 text-3xl font-black text-blue-700">
+                {Math.round(safeTruckProgress.percent)}%
+              </div>
+            </div>
+            <div className={kpiClass}>
+              <div className="text-xs font-black uppercase text-slate-500">Cajas</div>
+              <div className="mt-1 text-3xl font-black text-slate-950">{truckStats.cajas}</div>
+            </div>
+            <div className={kpiClass}>
+              <div className="text-xs font-black uppercase text-slate-500">Piezas</div>
+              <div className="mt-1 text-3xl font-black text-slate-950">{truckStats.piezas}</div>
+            </div>
+            <div className={kpiClass}>
+              <div className="text-xs font-black uppercase text-slate-500">Líneas</div>
+              <div className="mt-1 text-3xl font-black text-slate-950">{truckStats.lineas}</div>
+            </div>
+            <div className={kpiClass}>
+              <div className="text-xs font-black uppercase text-slate-500">Operarios</div>
+              <div className="mt-1 text-3xl font-black text-slate-950">{truckStats.operarios}</div>
+            </div>
+            <div className={kpiClass}>
+              <div className="text-xs font-black uppercase text-slate-500">Fabricaciones</div>
+              <div className="mt-1 text-3xl font-black text-slate-950">{truckStats.fabricaciones}</div>
+            </div>
+            <div className={kpiClass}>
+              <div className="text-xs font-black uppercase text-slate-500">Coladas</div>
+              <div className="mt-1 text-3xl font-black text-slate-950">{truckStats.coladas}</div>
+            </div>
+          </div>
+          <div className="mt-3 h-4 overflow-hidden rounded-full bg-slate-100">
+            <div
+              className={`h-full ${safeTruckProgress.isComplete ? "bg-emerald-600" : "bg-blue-600"}`}
+              style={{ width: `${safeTruckProgress.percent}%` }}
+            />
+          </div>
+        </div>
+
+        <div className="grid min-h-0 flex-1 gap-5 p-5 xl:grid-cols-[22%_53%_25%]">
+          <aside className="flex min-h-0 flex-col rounded-3xl border border-slate-200 bg-slate-50 p-4 shadow-sm">
+            <div className="mb-3">
+              <div className="text-xs font-black uppercase text-slate-500">Historial</div>
+              <div className="text-xl font-black text-slate-950">Camiones y cajas</div>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white p-3">
+              <div className="mb-2 text-xs font-black uppercase text-slate-500">Buscar caja</div>
+              <div className="flex gap-2">
+                <input
+                  value={boxSearch}
+                  onChange={(e) => setBoxSearch(e.target.value)}
+                  placeholder="FB-26-00001"
+                  className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm font-bold"
+                />
+                <button
+                  type="button"
+                  onClick={() => onSearchBox(boxSearch)}
+                  className="rounded-xl bg-blue-700 px-3 py-2 font-black text-white"
+                >
+                  🔎
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-3 grid max-h-36 shrink-0 gap-2 overflow-auto pr-1">
+              {trucks.map((truck) => {
+                const isSelected = String(truck.id) === selectedId;
+                return (
+                  <button
+                    type="button"
+                    key={truck.id}
+                    onClick={() => onSelectTruck(truck)}
+                    className={`rounded-2xl border px-3 py-2 text-left transition hover:shadow ${
+                      isSelected
+                        ? "border-blue-700 bg-blue-100 ring-2 ring-blue-200"
+                        : truck.status === "OPEN"
+                          ? "border-emerald-200 bg-emerald-50"
+                          : "border-slate-200 bg-white"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-black text-slate-900">🚚 {truck.truck_number}</span>
+                      <span className="rounded-full bg-slate-900 px-2 py-1 text-[10px] font-black text-white">
+                        {truck.status}
+                      </span>
+                    </div>
+                    <div className="mt-1 text-xs font-bold text-slate-500">
+                      {truck.planned_expedition_date || "Sin fecha"}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="mt-3 min-h-0 flex-1 overflow-auto rounded-2xl border border-slate-200 bg-white p-3">
+              <div className="mb-2 text-xs font-black uppercase text-slate-500">
+                Cajas del camión
+              </div>
+              <div className="space-y-2">
+                {boxLabelsSummary.map((box) => {
+                  const isSelected = String(box.numeroCaja) === selectedBoxNumber;
+                  const isHighlighted =
+                    String(highlightBoxNumber || "").trim().toUpperCase() ===
+                    String(box.numeroCaja || "").trim().toUpperCase();
+
+                  return (
+                    <button
+                      key={box.numeroCaja}
+                      type="button"
+                      onClick={() => setSelectedBox(box)}
+                      className={`w-full rounded-2xl border px-3 py-2 text-left transition hover:bg-blue-50 ${
+                        isSelected
+                          ? "border-blue-700 bg-blue-100 ring-2 ring-blue-200"
+                          : isHighlighted
+                            ? "border-yellow-400 bg-yellow-100"
+                            : "border-slate-200 bg-slate-50"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-black text-slate-950">📦 {box.numeroCaja}</span>
+                        <span
+                          className={`rounded-full px-2 py-1 text-xs font-black ${
+                            Number(box.totalPiezas) === Number(appConfig.piecesPerBox)
+                              ? "bg-emerald-100 text-emerald-800"
+                              : "bg-red-100 text-red-700"
+                          }`}
+                        >
+                          {box.totalPiezas} uds
+                        </span>
+                      </div>
+                      <div className="mt-1 text-xs font-bold text-slate-500">
+                        {box.operario || "Sin operario"} · {box.fecha || "-"}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </aside>
+
+          <main className="flex min-h-0 flex-col rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <div className="text-xs font-black uppercase text-slate-500">Mapa visual</div>
+                <div className="text-2xl font-black text-slate-950">Distribución del camión</div>
+              </div>
+              <div className="flex items-center gap-3 text-sm font-black">
+                <span className="flex items-center gap-1"><span className="h-3 w-3 rounded bg-emerald-500" /> Completa</span>
+                <span className="flex items-center gap-1"><span className="h-3 w-3 rounded bg-yellow-400" /> Seleccionada</span>
+                <span className="flex items-center gap-1"><span className="h-3 w-3 rounded bg-slate-200" /> Libre</span>
+              </div>
+            </div>
+
+            <div className="min-h-0 flex-1 rounded-3xl bg-slate-100 p-4">
+              <div
+                className="grid h-full gap-2"
+                style={{ gridTemplateColumns: `repeat(${gridColumns}, minmax(0, 1fr))` }}
+              >
+                {positions.map((box, index) => {
+                  const key = box?.numeroCaja || `empty-${index}`;
+                  const isSelected = box && String(box.numeroCaja) === selectedBoxNumber;
+                  const isHighlighted =
+                    box &&
+                    String(highlightBoxNumber || "").trim().toUpperCase() ===
+                      String(box.numeroCaja || "").trim().toUpperCase();
+
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      disabled={!box}
+                      onClick={() => box && setSelectedBox(box)}
+                      className={`min-h-[58px] rounded-2xl border-2 p-2 text-center transition ${
+                        !box
+                          ? "border-dashed border-slate-300 bg-white text-slate-300"
+                          : isSelected
+                            ? "scale-[1.03] border-yellow-500 bg-yellow-300 text-slate-950 shadow-lg"
+                            : isHighlighted
+                              ? "border-yellow-500 bg-yellow-100 text-slate-950"
+                              : "border-emerald-600 bg-emerald-500 text-white hover:scale-[1.02] hover:bg-emerald-600"
+                      }`}
+                    >
+                      {box ? (
+                        <>
+                          <div className="truncate text-sm font-black">{box.numeroCaja}</div>
+                          <div className="mt-1 text-xs font-black opacity-90">{box.totalPiezas} uds</div>
+                        </>
+                      ) : (
+                        <div className="text-xs font-black uppercase">Libre</div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </main>
+
+          <aside className="flex min-h-0 flex-col rounded-3xl border border-slate-200 bg-slate-50 p-5 shadow-sm">
+            <div className="mb-4">
+              <div className="text-xs font-black uppercase text-slate-500">Detalle</div>
+              <div className="text-2xl font-black text-slate-950">
+                {selectedBox ? `📦 ${selectedBox.numeroCaja}` : "Sin caja"}
+              </div>
+            </div>
+
+            {selectedBox ? (
+              <div className="min-h-0 flex-1 overflow-auto pr-1">
+                <div className="grid gap-3">
+                  <Detail label="Fecha" value={selectedBox.fecha || "-"} />
+                  <Detail label="Operario" value={selectedBox.operario || "-"} />
+                  <Detail label="Semana" value={selectedBox.semana || "-"} />
+                  <Detail label="Día" value={selectedBox.dia || "-"} />
+                  <div className="rounded-2xl bg-slate-900 p-4 text-white">
+                    <div className="text-xs font-black uppercase text-slate-300">Total piezas</div>
+                    <div className="mt-1 text-5xl font-black">{selectedBox.totalPiezas ?? "-"}</div>
+                  </div>
+                </div>
+
+                <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                  <div className="mb-3 text-sm font-black uppercase text-emerald-800">
+                    Fabricaciones / Coladas
+                  </div>
+                  <div className="space-y-2">
+                    {(selectedBox.combinaciones || []).map((item, index) => (
+                      <div key={index} className="rounded-xl bg-white px-4 py-3 font-bold text-slate-900 shadow-sm">
+                        {item}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
+                  <div className="text-sm font-black uppercase text-slate-500">Historial</div>
+                  <div className="mt-3 space-y-3 text-sm font-bold text-slate-700">
+                    <div>✅ Caja creada · {selectedBox.fecha || "-"}</div>
+                    <div>🚚 Asignada al camión {currentTruck?.truck_number || "-"}</div>
+                    <div>🖨 Etiqueta impresa · {selectedBox.numeroCaja}</div>
+                    <div>{currentTruck?.status === "CLOSED" ? "🔒 Camión cerrado" : "🟢 Camión en carga"}</div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-1 items-center justify-center rounded-3xl bg-white text-center text-sm font-black text-slate-500">
+                Selecciona una caja del historial o del mapa visual.
+              </div>
+            )}
+          </aside>
+        </div>
+
+        <div className="flex shrink-0 items-center justify-between border-t border-slate-200 bg-slate-50 px-6 py-4">
+          <div className="text-sm font-black text-slate-600">
+            Faltan {safeTruckProgress.remainingBoxes} cajas · {safeTruckProgress.remainingBoxes * appConfig.piecesPerBox} piezas
+          </div>
+
+          <div className="flex flex-wrap gap-3">
             <button
               onClick={printBoxLabelsReport}
               disabled={boxLabelsSummary.length === 0}
-              className="rounded-xl bg-red-600 px-4 py-2 font-bold text-white disabled:bg-slate-300"
+              className="rounded-2xl bg-red-600 px-5 py-3 font-black text-white disabled:bg-slate-300"
             >
-              Exportar PDF
+              📄 PDF
             </button>
-
+            <button
+              onClick={exportBoxLabelsExcel}
+              disabled={boxLabels.length === 0}
+              className="rounded-2xl bg-emerald-600 px-5 py-3 font-black text-white disabled:bg-slate-300"
+            >
+              📊 Excel
+            </button>
             <button
               onClick={closeActiveTruck}
               disabled={
@@ -455,295 +396,28 @@ const dashboardCardClass =
                 currentTruck?.id !== activeTruck?.id ||
                 currentTruck?.status !== "OPEN"
               }
-              className="rounded-xl bg-orange-600 px-4 py-2 font-bold text-white hover:bg-orange-700 disabled:bg-slate-300"
+              className="rounded-2xl bg-orange-600 px-5 py-3 font-black text-white hover:bg-orange-700 disabled:bg-slate-300"
             >
-              🚚 Cerrar camión
+              🔒 Cerrar camión
             </button>
-
             <button
               onClick={onClose}
-              className="rounded-xl bg-slate-100 px-4 py-2 font-bold text-slate-700"
+              className="rounded-2xl bg-slate-900 px-5 py-3 font-black text-white"
             >
-              Salir
+              ❌ Cerrar
             </button>
-          </div>
-        </div>
-      </div>
-
-
-
-        {boxLabelsSummary.length > 0 && (
-          <div
-            id="box-summary-section"
-            className="mb-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4"
-          >
-            <div className="mb-3 text-lg font-black text-emerald-900">
-              Resumen por caja ({boxLabelsSummary.length})
-            </div>
-
-            <div className="overflow-auto rounded-2xl border border-emerald-200 bg-white">
-              <table className="w-full min-w-[900px] text-sm">
-                <thead className="bg-emerald-700 text-white">
-                  <tr>
-                    <th className="px-3 py-2 text-left">Nº Caja</th>
-                    <th className="px-3 py-2 text-left">Fecha</th>
-                    <th className="px-3 py-2 text-left">Operario</th>
-                    <th className="px-3 py-2 text-right">Piezas</th>
-                    <th className="px-3 py-2 text-left">Combinaciones FAB/COL</th>
-                    <th className="px-3 py-2 text-right">Semana</th>
-                    <th className="px-3 py-2 text-right">Día</th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {boxLabelsSummary.map((box) => {
-                    const isHighlighted =
-                    String(highlightBoxNumber || "").trim().toUpperCase() ===
-                    String(box.numeroCaja || "").trim().toUpperCase();
-
-                    
-                    
-                    return (
-                      <tr
-                        key={box.numeroCaja}
-                        onClick={() => setSelectedBox(box)}
-                        className={`border-t border-emerald-100 transition hover:bg-emerald-50 cursor-pointer ${
-                          isHighlighted ? "ring-2 ring-yellow-400" : ""
-                        }`}
-                      >
-                        
-                        <td className={`px-3 py-2 font-black ${isHighlighted ? "bg-yellow-300" : ""}`}>
-                          {box.numeroCaja}
-                        </td>
-                        
-                        <td className={`px-3 py-2 ${isHighlighted ? "bg-yellow-300" : ""}`}>
-                          {box.fecha}
-                        </td>
-                        
-                        <td className={`px-3 py-2 ${isHighlighted ? "bg-yellow-300" : ""}`}>
-                          {box.operario}
-                        </td>
-                        
-                        <td
-                          className={`px-3 py-2 text-right font-black ${
-                            isHighlighted
-                              ? "bg-yellow-300"
-                              : box.totalPiezas === 16
-                                ? "text-emerald-700"
-                                : "text-red-600"
-                              }`}
-                            >
-                              {box.totalPiezas}
-                            </td>
-                            
-                            <td className={`px-3 py-2 ${isHighlighted ? "bg-yellow-300" : ""}`}>
-                              <div className="space-y-1">
-                                {box.combinaciones.map((combinacion, index) => (
-                                  <div key={index} className="font-medium">
-                                    {combinacion}
-                                  </div>
-                                ))}
-                              </div>
-                            </td>
-                            
-                            <td className={`px-3 py-2 text-right ${isHighlighted ? "bg-yellow-300" : ""}`}>
-                              {box.semana}
-                            </td>
-                            
-                            <td className={`px-3 py-2 text-right ${isHighlighted ? "bg-yellow-300" : ""}`}>
-                              {box.dia}
-                            </td>
-                          
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        
-
-        <div className="mt-4 rounded-2xl bg-slate-50 p-4 text-sm font-bold text-slate-700">
-  Cajas registradas:{" "}
-  <span className="text-emerald-700">
-    {truckStats.cajas}
-  </span>{" "}
-  de {appConfig.boxesPerTruck}
-</div>
-
-{selectedBox && (
-  <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4">
-    <div className="max-h-[90vh] w-full max-w-2xl overflow-auto rounded-3xl bg-white p-6 shadow-2xl">
-      
-      <div className="mb-5 flex items-start justify-between gap-4">
-        <div>
-          <div className="text-sm font-black uppercase tracking-wide text-slate-500">
-            Ficha de caja
-          </div>
-
-          <h2 className="mt-1 text-3xl font-black text-slate-900">
-            📦 {selectedBox.numeroCaja}
-          </h2>
-          
-          <div className="mt-2 flex items-center gap-2 text-sm font-black text-slate-600">
-            <span>🚚 Camión {currentTruck?.truck_number}</span>     
-            
-            <span
-              className={`rounded-full px-3 py-1 text-xs ${
-                currentTruck?.status === "OPEN"
-                  ? "bg-emerald-600 text-white"
-                  : "bg-slate-600 text-white"
-                }`}
-              >
-                {currentTruck?.status}
-              </span>
-            </div>
-          </div>
-
-          <button
-            onClick={() => setSelectedBox(null)}
-            className="rounded-xl bg-slate-100 px-4 py-2 font-black text-slate-700"
-          >
-            Cerrar
-          </button>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="rounded-2xl bg-slate-50 p-4">
-          <div className="text-xs font-bold uppercase text-slate-500">
-            📅 Fecha
-          </div>
-          <div className="mt-1 text-lg font-black text-slate-900">
-            {selectedBox.fecha || "-"}
-          </div>
-        </div>
-        
-        <div className="rounded-2xl bg-slate-50 p-4">
-          <div className="text-xs font-bold uppercase text-slate-500">
-            👤 Operarios
-          </div>
-          <div className="mt-1 text-lg font-black text-slate-900">
-            {selectedBox.operario || "-"}
-          </div>
-        </div>
-        
-        <div className="rounded-2xl bg-slate-50 p-4">
-          <div className="text-xs font-bold uppercase text-slate-500">
-            📆 Semana
-          </div>
-          <div className="mt-1 text-lg font-black text-slate-900">
-            {selectedBox.semana || "-"}
-          </div>
-        </div>
-        
-        <div className="rounded-2xl bg-slate-50 p-4">
-          <div className="text-xs font-bold uppercase text-slate-500">
-            🗓 Día
-          </div>
-          <div className="mt-1 text-lg font-black text-slate-900">
-            {selectedBox.dia || "-"}
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-        <div className="mb-3 text-lg font-black text-emerald-900">
-          Fabricaciones / Coladas
-        </div>
-
-        <div className="space-y-2">
-          {selectedBox.combinaciones.map((item, index) => (
-            <div
-              key={index}
-              className="rounded-xl bg-white px-4 py-3 font-bold text-slate-900 shadow-sm"
-            >
-              {item}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div
-        className="mt-5 rounded-2xl p-4"
-        style={{ backgroundColor: "#0f172a", color: "white" }}
-      >
-        <div className="text-xs font-bold uppercase" style={{ color: "#cbd5e1" }}>
-          Total piezas
-        </div>
-
-        <div className="mt-1 text-5xl font-black" style={{ color: "white" }}>
-          {selectedBox?.totalPiezas ?? "-"}
-        </div>
-      </div>
-
-      <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-        <div className="mb-4 text-lg font-black text-slate-900">
-          🕘 Historial de la caja
-        </div>
-
-        <div className="space-y-4">
-          <div className="flex gap-3">
-            <div className="mt-1 h-3 w-3 rounded-full bg-emerald-600" />
-            <div>
-              <div className="font-black text-slate-900">Caja creada</div>
-              <div className="text-sm font-bold text-slate-500">
-                {selectedBox.fecha || "-"}
-              </div>
-            </div>
-          </div>
-
-          <div className="flex gap-3">
-            <div className="mt-1 h-3 w-3 rounded-full bg-blue-600" />
-            <div>
-              <div className="font-black text-slate-900">
-                Asignada al camión {currentTruck?.truck_number || "-"}
-              </div>
-              <div className="text-sm font-bold text-slate-500">
-                Referencia {appConfig.reference}
-              </div>
-            </div>
-          </div>
-
-          <div className="flex gap-3">
-            <div className="mt-1 h-3 w-3 rounded-full bg-orange-500" />
-            <div>
-              <div className="font-black text-slate-900">Etiqueta impresa</div>
-              <div className="text-sm font-bold text-slate-500">
-                Nº caja {selectedBox.numeroCaja}
-              </div>
-            </div>
-          </div>
-
-          <div className="flex gap-3">
-            <div
-              className={`mt-1 h-3 w-3 rounded-full ${
-                currentTruck?.status === "CLOSED"
-                  ? "bg-slate-700"
-                  : "bg-slate-300"
-              }`}
-            />
-            <div>
-              <div className="font-black text-slate-900">
-                {currentTruck?.status === "CLOSED"
-                  ? "Camión cerrado"
-                  : "Camión pendiente de cierre"}
-              </div>
-              <div className="text-sm font-bold text-slate-500">
-                {currentTruck?.closed_at
-                  ? new Date(currentTruck.closed_at).toLocaleString("es-ES")
-                  : "Pendiente"}
-              </div>
-            </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
-)}
+  );
+}
 
-      </div>
+function Detail({ label, value }) {
+  return (
+    <div className="rounded-2xl bg-white p-4 shadow-sm">
+      <div className="text-xs font-black uppercase text-slate-500">{label}</div>
+      <div className="mt-1 text-lg font-black text-slate-950">{value}</div>
     </div>
   );
 }

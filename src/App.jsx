@@ -1,6 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 import LabelModal from "./components/LabelModal";
 import TruckListModal from "./components/TruckListModal";
+import { SmartTruckDashboardModal } from "./modules/dashboard";
+import { CommandPalette } from "./modules/command";
+import { ProductionModal } from "./modules/production";
+import AppWorkspaceShell from "./layout/AppWorkspaceShell";
 import * as XLSX from "xlsx";
 import { motion } from "framer-motion";
 import ConfigModal from "./components/ConfigModal";
@@ -37,6 +41,7 @@ import {
 } from "recharts";
 import { Button } from "./components/ui/button";
 import { supabase, isSupabaseConfigured } from "./lib/supabaseClient";
+import { APP_VERSION } from "./config/constants";
 
 import VisualHelpModalComponent from "./components/modals/VisualHelpModal";
 import EditRecordModalComponent from "./components/modals/EditRecordModal";
@@ -1130,6 +1135,9 @@ export default function App() {
   const [displayTruck, setDisplayTruck] = useState(null);
 
   const [highlightBoxNumber, setHighlightBoxNumber] = useState("");
+  const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [showProductionModal, setShowProductionModal] = useState(false);
+  const [activeWorkspaceModule, setActiveWorkspaceModule] = useState("dashboard");
 
   const [appUsers, setAppUsers] = useState(() => getStoredUsers());
 
@@ -3039,6 +3047,58 @@ async function handleSearchBox(boxNumber) {
   };
 
 
+  useEffect(() => {
+    const handleCommandShortcut = (event) => {
+      const isCommandShortcut = (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k";
+      if (!isCommandShortcut) return;
+      event.preventDefault();
+      setShowCommandPalette((value) => !value);
+    };
+
+    window.addEventListener("keydown", handleCommandShortcut);
+    return () => window.removeEventListener("keydown", handleCommandShortcut);
+  }, []);
+
+  const openCommandBox = (box) => {
+    const boxNumber = box?.numeroCaja || box?.numero_caja || "";
+    if (boxNumber) {
+      setShowBoxLabelsModal(true);
+      handleSearchBox(boxNumber);
+    }
+  };
+
+  const openCommandTruck = (truck) => {
+    if (truck) {
+      setActiveWorkspaceModule("trucks");
+      setShowBoxLabelsModal(true);
+      handleSelectTruck(truck);
+    }
+  };
+
+  const handleWorkspaceNavigate = (moduleId) => {
+    setActiveWorkspaceModule(moduleId);
+
+    if (moduleId === "dashboard" || moduleId === "trucks") {
+      setShowBoxLabelsModal(true);
+      return;
+    }
+
+    if (moduleId === "production") {
+      setShowProductionModal(true);
+      return;
+    }
+
+    if (moduleId === "labels") {
+      setShowLabelModal(true);
+      return;
+    }
+
+    if (moduleId === "config") {
+      setShowConfigModal(true);
+    }
+  };
+
+
   const dashboardStats = {
     totalRegistros: records?.length || 0,
     rechazos: records?.filter?.((r) => Number(r?.rechazos || 0) > 0)?.length || 0,
@@ -3049,6 +3109,17 @@ async function handleSearchBox(boxNumber) {
         : "-",
   };
 
+  const operatorLastBox = truckProgress?.lastBox || null;
+  const operatorLastRecord = getLastRecordForCurrentContext?.() || null;
+  const operatorShiftRecords = records.filter(
+    (record) =>
+      record.fecha === form.fecha &&
+      record.turno === form.turno &&
+      record.operario === form.operario
+  );
+  const operatorShiftOk = operatorShiftRecords.filter((record) => record.resultado === "OK").length;
+  const operatorShiftNok = operatorShiftRecords.filter((record) => record.resultado === "NO OK").length;
+
   if (!currentUser) {
     return <LoginScreen onLogin={handleLogin} users={appUsers} />;
   }
@@ -3057,6 +3128,87 @@ async function handleSearchBox(boxNumber) {
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900">
+      {!isOperatorView && (
+      <AppWorkspaceShell
+        activeModule={activeWorkspaceModule}
+        onNavigate={handleWorkspaceNavigate}
+        currentUser={currentUser}
+        supabaseOnline={isSupabaseConfigured}
+        now={new Date(nowMs)}
+        onOpenCommand={() => setShowCommandPalette(true)}
+      >
+        <div className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <div className="text-xs font-black uppercase tracking-[0.25em] text-blue-600">Workspace activo</div>
+              <h2 className="mt-1 text-3xl font-black text-slate-900">FM Control</h2>
+              <p className="mt-1 max-w-3xl text-sm font-semibold text-slate-500">
+                Panel central de producción. Usa la barra lateral para abrir Dashboard, Producción, Camiones, Etiquetas o Configuración.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowCommandPalette(true)}
+              className="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-black text-white shadow-lg"
+            >
+              🔍 Buscar · Ctrl K
+            </button>
+          </div>
+
+          <div className="mt-5 grid gap-3 md:grid-cols-4">
+            <div className="rounded-3xl bg-slate-50 p-4">
+              <div className="text-2xl font-black text-slate-900">{dashboardStats.totalRegistros}</div>
+              <div className="text-xs font-bold uppercase tracking-wide text-slate-500">Registros</div>
+            </div>
+            <div className="rounded-3xl bg-slate-50 p-4">
+              <div className="text-2xl font-black text-slate-900">{boxLabelsSummary?.length || 0}</div>
+              <div className="text-xs font-bold uppercase tracking-wide text-slate-500">Cajas</div>
+            </div>
+            <div className="rounded-3xl bg-slate-50 p-4">
+              <div className="text-2xl font-black text-slate-900">{trucks?.length || 0}</div>
+              <div className="text-xs font-bold uppercase tracking-wide text-slate-500">Camiones</div>
+            </div>
+            <div className="rounded-3xl bg-slate-50 p-4">
+              <div className="text-2xl font-black text-slate-900">{dashboardStats.operariosActivos}</div>
+              <div className="text-xs font-bold uppercase tracking-wide text-slate-500">Operarios activos</div>
+            </div>
+          </div>
+        </div>
+      </AppWorkspaceShell>
+      )}
+
+      {!isOperatorView && (
+      <CommandPalette
+        open={showCommandPalette}
+        onClose={() => setShowCommandPalette(false)}
+        boxes={boxLabelsSummary}
+        rawBoxRows={boxLabels}
+        trucks={trucks}
+        users={appUsers}
+        productionRecords={records}
+        appConfig={appConfig}
+        onOpenBox={openCommandBox}
+        onOpenTruck={openCommandTruck}
+        onOpenDashboard={() => { setActiveWorkspaceModule("dashboard"); setShowBoxLabelsModal(true); }}
+        onOpenConfig={() => { setActiveWorkspaceModule("config"); setShowConfigModal(true); }}
+        onOpenLabel={() => { setActiveWorkspaceModule("labels"); setShowLabelModal(true); }}
+        onOpenProduction={() => { setActiveWorkspaceModule("production"); setShowProductionModal(true); }}
+      />
+      )}
+
+      <ProductionModal
+        open={showProductionModal}
+        onClose={() => setShowProductionModal(false)}
+        boxLabels={boxLabels}
+        boxLabelsSummary={boxLabelsSummary}
+        activeTruck={activeTruck}
+        displayTruck={displayTruck}
+        appConfig={appConfig}
+        onOpenBox={(box) => {
+          setShowProductionModal(false);
+          openCommandBox(box);
+        }}
+      />
       {showAdminPanel && isAdminUser(currentUser) && (
         <div
           style={{
@@ -3321,8 +3473,58 @@ async function handleSearchBox(boxNumber) {
           </div>
         </div>
       )}
-      <div className="mx-auto flex min-h-screen max-w-[1600px] flex-col gap-4 p-4 lg:flex-row lg:p-6">
-        <aside className="max-h-[calc(100vh-24px)] overflow-y-auto overscroll-contain rounded-3xl border border-slate-200 bg-white p-4 shadow-xl lg:sticky lg:top-6 lg:h-[calc(100vh-48px)] lg:w-72 lg:shrink-0">
+      {isOperatorView && (
+        <div className="mx-auto mb-4 max-w-[1600px] px-3 pt-3 lg:px-4 lg:pt-4">
+          <div className="grid gap-3 xl:grid-cols-[1fr_auto] xl:items-stretch">
+            <div className="rounded-[2rem] border border-slate-200 bg-white px-6 py-5 shadow-sm">
+              <div className="text-[11px] font-black uppercase tracking-[0.28em] text-blue-700">FM Control Operator · v{APP_VERSION}</div>
+              <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <h1 className="text-3xl font-black leading-tight text-slate-950">Puesto de Trabajo</h1>
+                  <p className="mt-1 text-lg font-black text-slate-800">Control de Proceso · F-1012 · Célula B</p>
+                </div>
+                <div className="rounded-2xl bg-slate-100 px-4 py-3 text-right">
+                  <div className="text-sm font-black text-slate-950">{currentUser.name}</div>
+                  <div className="text-xs font-black uppercase tracking-wide text-slate-500">{roleLabel(currentUser.role)} · Turno {form.turno}</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setLabelForm({
+                    ...labelForm,
+                    numeroCaja: "",
+                  });
+                  setShowLabelModal(true);
+                }}
+                className="rounded-3xl bg-blue-600 px-5 py-5 text-base font-black text-white shadow-sm transition hover:bg-blue-700"
+              >
+                🖨️<br />Etiqueta
+              </button>
+              <button
+                type="button"
+                onClick={openBoxLabelsModal}
+                className="rounded-3xl border border-slate-300 bg-white px-5 py-5 text-base font-black text-slate-900 shadow-sm transition hover:bg-slate-50"
+              >
+                🚚<br />Camión
+              </button>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="rounded-3xl border border-red-200 bg-red-50 px-5 py-5 text-base font-black text-red-700 shadow-sm transition hover:bg-red-100"
+              >
+                🚪<br />Salir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className={isOperatorView ? "mx-auto min-h-screen max-w-[1600px] px-3 pb-4 lg:px-4" : "mx-auto flex min-h-screen max-w-[1600px] flex-col gap-4 p-4 lg:flex-row lg:p-6"}>
+        <aside className={`${isOperatorView ? "hidden" : ""} max-h-[calc(100vh-24px)] overflow-y-auto overscroll-contain rounded-3xl border border-slate-200 bg-white p-4 shadow-xl lg:sticky lg:top-6 lg:h-[calc(100vh-48px)] lg:w-72 lg:shrink-0`}>
           <div className="mb-5 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div
              style={{
@@ -3511,7 +3713,8 @@ async function handleSearchBox(boxNumber) {
           )}
         </aside>
 
-        <main className="flex-1 space-y-6">
+        <main className={isOperatorView ? "space-y-4" : "flex-1 space-y-6"}>
+          {!isOperatorView && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -3551,14 +3754,15 @@ async function handleSearchBox(boxNumber) {
               </div>
             </div>
           </motion.div>
+          )}
 
-          <div className={activeView === "nueva" ? "grid gap-6 xl:grid-cols-[460px_1fr]" : "grid gap-6"}>
+          <div className={activeView === "nueva" ? (isOperatorView ? "grid gap-4 xl:grid-cols-[minmax(560px,0.95fr)_minmax(420px,0.75fr)]" : "grid gap-6 xl:grid-cols-[460px_1fr]") : "grid gap-6"}>
           {activeView === "nueva" && (
           <>
           <Card className="rounded-3xl border-0 shadow-lg">
             <CardContent className="space-y-5 p-6">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold">Nueva verificación</h2>
+                <h2 className="text-xl font-black">Control de proceso</h2>
 
                 {overallOk ? (
                   <div className="flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-sm text-emerald-700">
@@ -3979,7 +4183,7 @@ async function handleSearchBox(boxNumber) {
                 className="w-full rounded-2xl py-6 text-base shadow-md"
               >
                 <Save className="mr-2 h-5 w-5" />
-                Guardar verificación
+                Guardar control de proceso
               </Button>
 
               <Button
@@ -3998,6 +4202,107 @@ async function handleSearchBox(boxNumber) {
               
             </CardContent>
           </Card>
+
+          {isOperatorView && (
+            <div className="space-y-4">
+              <Card className="rounded-3xl border-0 shadow-lg">
+                <CardContent className="space-y-4 p-6">
+                  <div>
+                    <div className="text-xs font-black uppercase tracking-[0.22em] text-slate-500">Actividad reciente</div>
+                    <h2 className="mt-1 text-2xl font-black text-slate-950">Última etiqueta realizada</h2>
+                  </div>
+
+                  <div className="rounded-[2rem] border border-blue-100 bg-blue-50 p-5">
+                    <div className="text-4xl font-black text-blue-950">{operatorLastBox?.numeroCaja || "Sin etiqueta"}</div>
+                    <div className="mt-2 grid gap-2 text-sm font-bold text-blue-900">
+                      <span>Piezas: <strong>{operatorLastBox?.totalPiezas ?? "-"}</strong></span>
+                      <span>Operario: <strong>{operatorLastBox?.operario || "-"}</strong></span>
+                      <span>Fecha: <strong>{operatorLastBox?.fecha || "-"}</strong></span>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="rounded-2xl bg-slate-100 p-4">
+                      <div className="text-2xl font-black text-slate-950">{operatorShiftRecords.length}</div>
+                      <div className="text-xs font-black uppercase text-slate-500">Controles turno</div>
+                    </div>
+                    <div className="rounded-2xl bg-emerald-50 p-4">
+                      <div className="text-2xl font-black text-emerald-700">{operatorShiftOk}</div>
+                      <div className="text-xs font-black uppercase text-emerald-700">OK</div>
+                    </div>
+                    <div className="rounded-2xl bg-red-50 p-4">
+                      <div className="text-2xl font-black text-red-700">{operatorShiftNok}</div>
+                      <div className="text-xs font-black uppercase text-red-700">NO OK</div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                    <div className="text-xs font-black uppercase tracking-wide text-slate-500">Última verificación</div>
+                    <div className="mt-1 text-xl font-black text-slate-950">{lastVerificationElapsedLabel}</div>
+                    <div className="mt-1 text-sm font-bold text-slate-500">{operatorLastRecord?.horaGuardado || operatorLastRecord?.hora || "Sin registros"}</div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="rounded-3xl border-0 shadow-lg">
+                <CardContent className="space-y-4 p-6">
+                  <div>
+                    <div className="text-xs font-black uppercase tracking-[0.22em] text-red-600">Rechazos</div>
+                    <h2 className="mt-1 text-2xl font-black text-slate-950">Entrada pieza de rechazo</h2>
+                    <p className="mt-1 text-sm font-bold text-slate-500">Registro rápido de una pieza NO OK durante el turno.</p>
+                  </div>
+
+                  <input
+                    className="input text-lg font-black text-slate-900"
+                    value={incidentForm.numeroPieza || form.numeroPieza || ""}
+                    onChange={(event) =>
+                      setIncidentForm((previous) => ({
+                        ...previous,
+                        numeroPieza: event.target.value,
+                      }))
+                    }
+                    placeholder="Número de pieza rechazada"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIncidentForm((previous) => ({
+                        ...previous,
+                        numeroPieza: previous.numeroPieza || form.numeroPieza || "",
+                      }));
+                      setShowIncidentModal(true);
+                    }}
+                    className="w-full rounded-3xl bg-red-600 px-5 py-5 text-lg font-black text-white shadow-md transition hover:bg-red-700"
+                  >
+                    ⚠️ Registrar rechazo
+                  </button>
+                </CardContent>
+              </Card>
+
+              <Card className="rounded-3xl border-0 shadow-lg">
+                <CardContent className="grid gap-3 p-6 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={() => setActiveView("historico")}
+                    className="rounded-3xl border border-slate-300 bg-white px-5 py-5 text-base font-black text-slate-900 shadow-sm transition hover:bg-slate-50"
+                  >
+                    📋 Mi historial
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setForm({ ...form, numeroPieza: "" });
+                      setValues({});
+                    }}
+                    className="rounded-3xl border border-blue-200 bg-blue-50 px-5 py-5 text-base font-black text-blue-800 shadow-sm transition hover:bg-blue-100"
+                  >
+                    🔄 Nueva pieza
+                  </button>
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
           {!isOperatorView && (
           <Card className="rounded-3xl border-0 shadow-lg">
@@ -5491,24 +5796,27 @@ saveIncidentsUpdate(
 )}
 
 {showBoxLabelsModal && (
-  <TruckListModal
-  boxLabels={boxLabels}
-  boxLabelsSummary={boxLabelsSummary}
-  exportBoxLabelsExcel={exportBoxLabelsExcel}
-  printBoxLabelsReport={printBoxLabelsReport}
-  activeTruck={activeTruck}
-  displayTruck={displayTruck}
-  selectedTruckId={displayTruck?.id || activeTruck?.id}
-  trucks={trucks}
-  appConfig={appConfig}
-  truckProgress={truckProgress}
-  updateTruckExpeditionDate={updateTruckExpeditionDate}
-  closeActiveTruck={closeActiveTruck}
-  onSelectTruck={handleSelectTruck}
-  onSearchBox={handleSearchBox}
-  highlightBoxNumber={highlightBoxNumber}
-  onClose={() => setShowBoxLabelsModal(false)}
-/>
+  <SmartTruckDashboardModal
+    boxLabels={boxLabels}
+    boxLabelsSummary={boxLabelsSummary}
+    exportBoxLabelsExcel={exportBoxLabelsExcel}
+    printBoxLabelsReport={printBoxLabelsReport}
+    activeTruck={activeTruck}
+    displayTruck={displayTruck}
+    selectedTruckId={displayTruck?.id || activeTruck?.id}
+    trucks={trucks}
+    appConfig={appConfig}
+    truckProgress={truckProgress}
+    updateTruckExpeditionDate={updateTruckExpeditionDate}
+    closeActiveTruck={closeActiveTruck}
+    onSelectTruck={handleSelectTruck}
+    onSearchBox={handleSearchBox}
+    highlightBoxNumber={highlightBoxNumber}
+    onClose={() => {
+      setShowBoxLabelsModal(false);
+      setDisplayTruck(null);
+    }}
+  />
 )}
 
       {showRejectsModal && (
@@ -6857,6 +7165,8 @@ function PdfMachineReport({ title, machineName, records }) {
     </section>
   );
 }
+
+
 
 
 function UserSessionBadge({ user, onLogout }) {
