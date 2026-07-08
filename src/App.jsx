@@ -2357,11 +2357,18 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
     setTimerStart(null);
     setElapsedSeconds(0);
     setNowMs(Date.now());
+    
     setForm((previous) => ({
       ...previous,
       numeroPieza: "",
+      rechazoTipo: "",
+      observaciones: "",
     }));
-
+    
+    setTimeout(() => {
+      numeroPiezaInputRef.current?.focus();
+    }, 100);
+    
     alert(`Verificación guardada correctamente.\n\nPieza: ${row.numeroPieza}\nResultado: ${row.resultado}\nBase de datos: ${isSupabaseConfigured ? "compartida" : "local"}`);
     } catch (error) {
       console.error("Error guardando verificación:", error);
