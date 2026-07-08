@@ -1129,7 +1129,7 @@ function isQualityDailyValidationEmpty(check) {
   return isQualityDailyCheckEmptyById(check.id, check.value);
 }
 export default function App() {
-  const [toast, setToast] = useState(null);
+  const [notification, setNotification] = useState(null);
 
   const [activeTruck, setActiveTruck] = useState(null);
 
@@ -2299,6 +2299,14 @@ ${error?.message || String(error)}`);
       }
     };
     
+    const showNotification = (message, type = "success", duration = 2500) => {
+      setNotification({ message, type });
+      
+      window.setTimeout(() => {
+        setNotification(null);
+      }, duration);
+    };
+
     const saveRecord = () => {
     try {
 
@@ -2371,7 +2379,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
       numeroPiezaInputRef.current?.focus();
     }, 100);
     
-    showToast(
+    showNotification(
       `Pieza ${row.numeroPieza} · ${row.resultado}`
     );
 
@@ -5930,6 +5938,17 @@ saveIncidentsUpdate(
               </Button>
             </div>
           </div>
+        </div>
+      )}
+
+      {notification && (
+        <div
+          className={`fixed top-5 right-5 z-[9999] rounded-2xl px-5 py-4 shadow-2xl text-white font-bold transition-all ${
+            notification.type === "success" ? "bg-emerald-600" : "bg-red-600"
+          }`}
+        >
+          <div className="text-sm uppercase opacity-80">FM Control</div>
+          <div className="text-base font-black">{notification.message}</div>
         </div>
       )}
 
