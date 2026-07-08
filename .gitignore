@@ -24,3 +24,10 @@ dist-ssr
 *.sw?
 
 .vercel
+
+# RC1 - Archivos temporales y copias de trabajo
+src_unzipped/
+*.zip
+
+# Si en el futuro quieres permitir un ZIP concreto de releases,
+# lo podremos sacar de esta regla.
