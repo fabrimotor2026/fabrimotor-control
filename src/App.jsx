@@ -4917,49 +4917,35 @@ async function handleSearchBox(boxNumber) {
                 </button>
                 </div>
                 
-                <div className="grid gap-4">
-                  <Field label="Código etiqueta">
-                    <input
-                     className="input text-base font-bold text-slate-900"
-                     value={incidentForm.codigoEtiqueta}
-                     onChange={(e) =>
-                      setIncidentForm({
-                        ...incidentForm,
-                        codigoEtiqueta: e.target.value,
-                      })
-                    }
-                    />
-                  </Field>
-
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <Field label="Nº fabricación">
-                    <input
-                      className="input text-base font-bold text-slate-900"
-                      value={incidentForm.numeroFabricacion}
-                      onChange={(e) =>
-                        setIncidentForm({
-                          ...incidentForm,
-                          numeroFabricacion: e.target.value,
-                        })
-                      }
-                    />
-                  </Field>
-
-                  <Field label="Nº colada">
-                    <input
-                      className="input text-base font-bold text-slate-900"
-                      value={incidentForm.numeroColada}
-                      onChange={(e) =>
-                        setIncidentForm({
-                          ...incidentForm,
-                          numeroColada: e.target.value,
-                        })
-                      }
-                    />
-                  </Field>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="mb-3 text-xs font-black uppercase tracking-wide text-slate-500">
+                    Información de la pieza
+                  </div>
                   
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div>
+                      <div className="text-xs font-black uppercase text-slate-500">Código etiqueta</div>
+                      <div className="mt-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-base font-black text-slate-900">
+                        {incidentForm.codigoEtiqueta || "-"}
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <div className="text-xs font-black uppercase text-slate-500">Nº fabricación</div>
+                      <div className="mt-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-base font-black text-slate-900">
+                        {incidentForm.numeroFabricacion || "-"}
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <div className="text-xs font-black uppercase text-slate-500">Nº colada</div>
+                      <div className="mt-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-base font-black text-slate-900">
+                        {incidentForm.numeroColada || "-"}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-
+                
                   <Field label="Tipo de fallo">
                     <select
                     className="input text-base font-bold text-slate-900"
