@@ -4253,16 +4253,7 @@ async function handleSearchBox(boxNumber) {
                     <p className="mt-1 text-sm font-bold text-slate-500">Registro rápido de una pieza NO OK durante el turno.</p>
                   </div>
 
-                  <input
-                    className="input text-lg font-black text-slate-900"
-                    value={incidentForm.numeroPieza || form.numeroPieza || ""}
-                    onChange={(event) =>
-                      setIncidentForm((previous) => ({
-                        ...previous,
-                        numeroPieza: event.target.value,
-                      }))
-                    }                    
-                  />
+
 
                   <button
                     type="button"
