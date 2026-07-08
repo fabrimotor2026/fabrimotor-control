@@ -5027,7 +5027,6 @@ async function handleSearchBox(boxNumber) {
         </Button> 
       </div>
       </div>
-      </div>
       )} 
 
      {showIncidentsListModal && (
