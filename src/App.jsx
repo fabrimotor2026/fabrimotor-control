@@ -4190,14 +4190,14 @@ async function handleSearchBox(boxNumber) {
                 onClick={() => {
                   setIncidentForm((previous) => ({
                     ...previous,
-                    numeroPieza: form.numeroPieza || "",
+                    numeroPieza: operatorLastBox?.lastPiece || "",
                   }));
                   setShowIncidentModal(true);
                 }}
                 className="w-full rounded-2xl bg-red-600 py-6 text-base text-white shadow-md"
               >
                 <AlertTriangle className="mr-2 h-5 w-5" />
-                Informar pieza NO OK
+                Registrar pieza NO OK
               </Button>
               
             </CardContent>
@@ -4260,8 +4260,7 @@ async function handleSearchBox(boxNumber) {
                         ...previous,
                         numeroPieza: event.target.value,
                       }))
-                    }
-                    placeholder="Número de pieza rechazada"
+                    }                    
                   />
 
                   <button
@@ -4906,7 +4905,7 @@ async function handleSearchBox(boxNumber) {
           <div className="w-full max-w-2xl rounded-3xl bg-white p-6 shadow-2xl">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-xl font-black text-slate-900">
-                Informar pieza NO OK
+                Registrar pieza NO OK
                 </h2>
                 
                 
