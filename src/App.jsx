@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import LabelModal from "./components/LabelModal";
 import TruckListModal from "./components/TruckListModal";
 import { SmartTruckDashboardModal } from "./modules/dashboard";
@@ -3843,7 +3843,8 @@ async function handleSearchBox(boxNumber) {
                                 
                 <Field label="Número de pieza">
                   <input
-                    className="input text-base font-bold text-slate-900"
+                    ref={numeroPiezaInputRef}
+                    className="input text-lg font-black"
                     value={form.numeroPieza}
                     onChange={(e) =>
                       setForm({
