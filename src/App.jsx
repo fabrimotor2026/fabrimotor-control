@@ -11,6 +11,7 @@ import ConfigModal from "./components/ConfigModal";
 import Notification from "./components/common/Notification";
 import LastLabelCard from "./components/common/LastLabelCard";
 import ControlStatusSummary from "./components/common/ControlStatusSummary";
+import ReadOnlyField from "./components/common/ReadOnlyField";
 import {
   ClipboardCheck,
   Download,
@@ -4914,26 +4915,20 @@ async function handleSearchBox(boxNumber) {
                   </div>
                   
                   <div className="grid gap-3 sm:grid-cols-3">
-                    <div>
-                      <div className="text-xs font-black uppercase text-slate-500">Código etiqueta</div>
-                      <div className="mt-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-base font-black text-slate-900">
-                        {incidentForm.codigoEtiqueta || "-"}
-                      </div>
-                    </div>
+                    <ReadOnlyField
+                      label="Código etiqueta"
+                      value={incidentForm.codigoEtiqueta}
+                    />
                     
-                    <div>
-                      <div className="text-xs font-black uppercase text-slate-500">Nº fabricación</div>
-                      <div className="mt-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-base font-black text-slate-900">
-                        {incidentForm.numeroFabricacion || "-"}
-                      </div>
-                    </div>
+                    <ReadOnlyField
+                      label="Nº fabricación"
+                      value={incidentForm.numeroFabricacion}
+                    />
                     
-                    <div>
-                      <div className="text-xs font-black uppercase text-slate-500">Nº colada</div>
-                      <div className="mt-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-base font-black text-slate-900">
-                        {incidentForm.numeroColada || "-"}
-                      </div>
-                    </div>
+                    <ReadOnlyField
+                      label="Nº colada"
+                      value={incidentForm.numeroColada}
+                    />
                   </div>
                 </div>
                 
