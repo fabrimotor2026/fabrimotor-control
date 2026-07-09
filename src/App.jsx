@@ -10,6 +10,7 @@ import { motion } from "framer-motion";
 import ConfigModal from "./components/ConfigModal";
 import Notification from "./components/common/Notification";
 import LastLabelCard from "./components/common/LastLabelCard";
+import ControlStatusSummary from "./components/common/ControlStatusSummary";
 import {
   ClipboardCheck,
   Download,
@@ -4200,48 +4201,12 @@ async function handleSearchBox(boxNumber) {
                   }
                 />
               </Field>
+              
+              <ControlStatusSummary
+                validation={validation}
+                overallOk={overallOk}
+              />         
 
-              <div
-                className={`rounded-2xl border p-4 ${
-                  overallOk
-                    ? "border-emerald-200 bg-emerald-50"
-                    : "border-red-200 bg-red-50"
-                }`}
-              >
-                <div className="mb-3 text-xs font-black uppercase tracking-wide text-slate-600">
-                  Estado del control
-                </div>
-                
-                <div className="grid gap-3 sm:grid-cols-3">
-                  <div className="rounded-xl bg-white px-3 py-2">
-                    <div className="text-xs font-black uppercase text-emerald-700">OK</div>
-                    <div className="text-2xl font-black text-emerald-700">
-                      {validation.filter((item) => item.ok).length}
-                    </div>
-                  </div>
-                  
-                  <div className="rounded-xl bg-white px-3 py-2">
-                    <div className="text-xs font-black uppercase text-red-700">NO OK</div>
-                    <div className="text-2xl font-black text-red-700">               
-                      {validation.filter((item) => item.value !== "" && !item.ok).length}
-                    </div>
-                  </div>
-                  
-                  <div className="rounded-xl bg-white px-3 py-2">
-                    <div className="text-xs font-black uppercase text-slate-500">Sin medir</div>
-                    <div className="text-2xl font-black text-slate-700">
-                      {validation.filter((item) => item.value === "" || item.value === undefined).length}
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="mt-3 rounded-xl bg-white px-4 py-3 text-center text-lg font-black">
-                  Resultado previsto:{" "}
-                  <span className={overallOk ? "text-emerald-700" : "text-red-700"}>
-                    {overallOk ? "OK" : "NO OK"}
-                  </span>
-                </div>
-              </div>
 
               <Button
                 onClick={saveRecord}
