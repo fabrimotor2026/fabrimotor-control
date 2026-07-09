@@ -2,6 +2,7 @@ import {
   BarChart3,
   ClipboardList,
   Gauge,
+  LogOut,
   PackagePlus,
   Settings,
   Truck,
@@ -31,7 +32,12 @@ const NAV_GROUPS = [
   },
 ];
 
-export default function Sidebar({ activeModule, onNavigate, currentUser }) {
+export default function Sidebar({
+  activeModule,
+  onNavigate,
+  currentUser,
+  onLogout,
+}) {
   return (
     <aside className="fixed inset-y-0 left-0 z-[8800] hidden w-72 flex-col border-r border-slate-800 bg-[#0f172a] text-slate-100 shadow-2xl lg:flex">
       <div className="border-b border-white/10 px-6 py-6">
@@ -81,6 +87,22 @@ export default function Sidebar({ activeModule, onNavigate, currentUser }) {
           ))}
         </div>
       </nav>
+
+      <div className="border-t border-white/10 p-4">
+        <button
+          type="button"
+          onClick={onLogout}
+          className="group flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-[15px] font-black text-red-300 transition hover:bg-red-600/10 hover:text-red-200"
+        >
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-500/10 group-hover:bg-red-500/20">
+            <LogOut className="h-5 w-5" />
+          </span>
+          
+          <span className="flex-1">
+            Cerrar sesión
+          </span>
+        </button>
+      </div>
 
       <div className="border-t border-white/10 p-4">
         <div className="rounded-3xl bg-white/8 p-4 ring-1 ring-white/10">

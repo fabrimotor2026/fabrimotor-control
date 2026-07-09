@@ -1,6 +1,5 @@
-import { Save, AlertTriangle } from "lucide-react";
+import { Save } from "lucide-react";
 import { Button } from "../../components/ui/button";
-import ControlStatusSummary from "../../components/common/ControlStatusSummary";
 
 export default function ControlProcessPanel({
   children,
@@ -12,16 +11,33 @@ export default function ControlProcessPanel({
   setIncidentForm,
   setShowIncidentModal,
   operatorLastBox,
-  numeroPiezaInputRef,
+  Field,
 }) {
   return (
     <>
-      {children}
+          
+      {overallOk === false && (
+  <Field label="Resumen general del rechazo (opcional)">
+    <textarea
+      className="input min-h-[80px] border-red-300 bg-red-50"
+      placeholder="Describe el defecto que ha generado el rechazo..."
+      value={form.rechazoTipo}
+      onChange={(e) =>
+        setForm({ ...form, rechazoTipo: e.target.value })
+      }
+    />
+  </Field>
+)}
 
-      <ControlStatusSummary
-        validation={validation}
-        overallOk={overallOk}
-      />
+<Field label="Observaciones">
+  <textarea
+    className="input min-h-[100px]"
+    value={form.observaciones}
+    onChange={(e) =>
+      setForm({ ...form, observaciones: e.target.value })
+    }
+  />
+</Field>
 
       <Button
         onClick={saveRecord}
@@ -29,21 +45,7 @@ export default function ControlProcessPanel({
       >
         <Save className="mr-2 h-5 w-5" />
         Guardar control de proceso
-      </Button>
-
-      <Button
-        onClick={() => {
-          setIncidentForm((previous) => ({
-            ...previous,
-            numeroPieza: operatorLastBox?.lastPiece || "",
-          }));
-          setShowIncidentModal(true);
-        }}
-        className="w-full rounded-2xl bg-red-600 py-6 text-base text-white shadow-md"
-      >
-        <AlertTriangle className="mr-2 h-5 w-5" />
-        Registrar pieza NO OK
-      </Button>
+      </Button>      
     </>
   );
 }

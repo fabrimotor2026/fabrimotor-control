@@ -8,6 +8,7 @@ import TruckProgress from "./TruckProgress";
 import TruckHistory from "./TruckHistory";
 import BoxMapPanel from "./BoxMapPanel";
 import BoxDetail from "./BoxDetail";
+import ExpeditionPlanner from "./ExpeditionPlanner";
 
 export default function SmartTruckDashboardModal({
   boxLabels = [],
@@ -26,6 +27,16 @@ export default function SmartTruckDashboardModal({
   onSearchBox,
   highlightBoxNumber,
   onClose,
+  truckSchedule = [],
+  onCreatePlannedTruck,
+  onUpdatePlannedTruck,
+  onDeletePlannedTruck,
+  loadTruckSchedule,
+  createPlannedTruck,
+  updatePlannedTruck,
+  deletePlannedTruck,
+  currentUser,
+  isAdminUser,
 }) {
   const [searchValue, setSearchValue] = useState(highlightBoxNumber || "");
   const [newExpeditionDate, setNewExpeditionDate] = useState(
@@ -53,9 +64,11 @@ export default function SmartTruckDashboardModal({
     await updateTruckExpeditionDate(currentTruck.id, newExpeditionDate);
   };
 
+  
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4">
-      <div className="flex max-h-[94vh] w-full max-w-7xl flex-col overflow-hidden rounded-[2rem] border border-slate-200 bg-slate-100 shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/60 p-4 pt-24">
+      <div className="flex max-h-[calc(100vh-7rem)] w-full max-w-7xl flex-col overflow-hidden rounded-[2rem] border border-slate-200 bg-slate-100 shadow-2xl">
         <DashboardHeader
           currentTruck={currentTruck}
           appConfig={appConfig}
@@ -74,6 +87,18 @@ export default function SmartTruckDashboardModal({
           <KPIGrid stats={stats} />
           <TruckProgress percent={stats.percent} />
 
+          {isAdminUser?.(currentUser) && (
+            <div className="mt-6">
+              <ExpeditionPlanner
+                truckSchedule={truckSchedule}
+                onCreatePlannedTruck={onCreatePlannedTruck}
+                onUpdatePlannedTruck={onUpdatePlannedTruck}
+                onDeletePlannedTruck={onDeletePlannedTruck}
+                currentUser={currentUser}
+              />
+            </div>
+          )}
+
           <div className="mt-6 grid gap-6 xl:grid-cols-[300px_1fr_360px]">
             <TruckHistory trucks={trucks} selectedTruckId={selectedTruckId} onSelectTruck={onSelectTruck} />
             <BoxMapPanel
@@ -91,6 +116,7 @@ export default function SmartTruckDashboardModal({
               newExpeditionDate={newExpeditionDate}
               setNewExpeditionDate={setNewExpeditionDate}
               handleSaveExpeditionDate={handleSaveExpeditionDate}
+              canEditExpeditionDate={isAdminUser?.(currentUser)}
             />
           </div>
         </div>

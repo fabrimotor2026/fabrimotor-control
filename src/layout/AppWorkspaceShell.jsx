@@ -21,6 +21,7 @@ export default function AppWorkspaceShell({
   supabaseOnline,
   now,
   onOpenCommand,
+  onLogout,
   children,
 }) {
   const nowText = useMemo(() => {
@@ -41,7 +42,12 @@ export default function AppWorkspaceShell({
 
   return (
     <>
-      <Sidebar activeModule={activeModule} onNavigate={onNavigate} currentUser={currentUser} />
+      <Sidebar
+        activeModule={activeModule}
+        onNavigate={onNavigate}
+        currentUser={currentUser}
+        onLogout={onLogout}
+      />
       <Header
         activeModuleLabel={activeModuleLabel}
         currentUser={currentUser}

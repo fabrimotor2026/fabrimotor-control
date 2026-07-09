@@ -12,9 +12,7 @@ import Notification from "./components/common/Notification";
 import LastLabelCard from "./components/common/LastLabelCard";
 import ControlStatusSummary from "./components/common/ControlStatusSummary";
 import ReadOnlyField from "./components/common/ReadOnlyField";
-<ControlProcessPanel>
 import ControlProcessPanel from "./modules/control/ControlProcessPanel";
-</ControlProcessPanel>
 import {
   ClipboardCheck,
   Download,
@@ -60,6 +58,15 @@ import {
   closeTruck as closeTruckFromService,
   fetchTrucks as fetchTrucksFromService,
 } from "./services/truckService";
+
+import {
+  fetchTruckSchedule,
+  createPlannedTruck,
+  updatePlannedTruck,
+  deletePlannedTruck,
+  fetchNextPlannedTruck,
+  openPlannedTruck,
+} from "./services/truckScheduleService";
 
 const ACCESS_CODE = "1234";
 
@@ -707,7 +714,7 @@ async function fetchSharedIncidents() {
 
   if (error) throw error;
 
-
+  return (data || []).map((row) => row.data).filter(Boolean);
 }
 
 async function upsertSharedIncident(incident) {
@@ -1138,9 +1145,12 @@ function isQualityDailyValidationEmpty(check) {
 export default function App() {
   const [notification, setNotification] = useState(null);
 
+  const numeroPiezaInputRef = useRef(null);
+
   const [activeTruck, setActiveTruck] = useState(null);
 
   const [trucks, setTrucks] = useState([]);
+  const [truckSchedule, setTruckSchedule] = useState([]);
   const [displayTruck, setDisplayTruck] = useState(null);
 
   const [highlightBoxNumber, setHighlightBoxNumber] = useState("");
@@ -1276,6 +1286,43 @@ async function updateTruckExpeditionDate(truckId, newDate) {
 
   await closeTruckFromService(supabase, activeTruck.id);
 
+  const nextPlannedTruck = await fetchNextPlannedTruck(
+    supabase,
+    appConfig.reference
+  );
+
+  if (nextPlannedTruck) {
+    await openPlannedTruck(supabase, nextPlannedTruck.id);
+
+    const newTruck = await getActiveTruck(
+      appConfig.reference,
+      currentUser ? `${currentUser.username} - ${currentUser.name}` : ""
+    );
+
+    if (newTruck?.id) {
+      await updateTruckExpeditionDate(
+        newTruck.id,
+        nextPlannedTruck.planned_expedition_date
+      );
+    }
+
+    setActiveTruck(newTruck);
+    setBoxLabels([]);
+    await loadTrucksHistory();
+    await loadTruckSchedule();
+    setShowBoxLabelsModal(false);
+
+    alert(
+      `Camión ${activeTruck.truck_number} cerrado correctamente.\n\nNuevo camión activo: ${newTruck.truck_number}\nFecha prevista: ${
+        nextPlannedTruck.planned_expedition_date
+          ? nextPlannedTruck.planned_expedition_date.split("-").reverse().join("/")
+          : "Sin fecha prevista"
+      }`
+    );
+
+    return;
+  }
+
   const newTruck = await getActiveTruck(
     appConfig.reference,
     currentUser ? `${currentUser.username} - ${currentUser.name}` : ""
@@ -1283,6 +1330,8 @@ async function updateTruckExpeditionDate(truckId, newDate) {
 
   setActiveTruck(newTruck);
   setBoxLabels([]);
+  await loadTrucksHistory();
+  await loadTruckSchedule();
   setShowBoxLabelsModal(false);
 
   alert(
@@ -2049,81 +2098,79 @@ ${error?.message || String(error)}`);
   };
 
   const printBoxLabel = async () => {
-    if (totalCaja !== appConfig.piecesPerBox) {
-      alert(`La suma de piezas debe ser exactamente ${appConfig.piecesPerBox}.`);
-      return;
-    }
+  if (totalCaja !== appConfig.piecesPerBox) {
+    alert(`La suma de piezas debe ser exactamente ${appConfig.piecesPerBox}.`);
+    return;
+  }
 
-    if (!labelForm.operario1 || labelForm.operario1.length !== 4) {
-      alert("El Operario 1 debe tener exactamente 4 cifras.");
-      return;
-    }
+  if (!labelForm.operario1 || labelForm.operario1.length !== 4) {
+    alert("El Operario 1 debe tener exactamente 4 cifras.");
+    return;
+  }
 
-    if (labelForm.operario2 && labelForm.operario2.length !== 4) {
-      alert("El Operario 2 debe tener exactamente 4 cifras.");
-      return;
-    }
+  if (labelForm.operario2 && labelForm.operario2.length !== 4) {
+    alert("El Operario 2 debe tener exactamente 4 cifras.");
+    return;
+  }
 
-    const counter = await fetchBoxCounter();
-    const numeroCajaAsignado = String(counter).padStart(5, "0");
-    const numeroCajaCompleto = `${appConfig.boxPrefix}-${numeroCajaAsignado}`;
-    const truck = await getActiveTruck(
-      appConfig.reference,
-      currentUser ? `${currentUser.username} - ${currentUser.name}` : ""
-    );
-    
-    setActiveTruck(truck);
-    
-    if (!truck) {
-      alert("No existe ningún camión abierto.");
-      return;
-    }
-            
-    try {
-      const exists = await boxLabelExists(numeroCajaCompleto);
-      
-      if (exists) {
-        alert(
-          `La caja ${numeroCajaCompleto} ya existe.\n\nNo se imprimirá la etiqueta.\n\nContacte con el administrador.`
-        );
-        return;
-      }
-    } catch (error) {
-      console.error("Error comprobando duplicado de caja:", error);
-      alert("No se ha podido comprobar si la caja ya existe. No se imprimirá la etiqueta.");
-      return;
-    }
-  
+  const printWindow = window.open("", "_blank");
+
+  if (!printWindow) {
+    alert("El navegador ha bloqueado la ventana de impresión. Permite ventanas emergentes para esta página.");
+    return;
+  }
+
+  const counter = await fetchBoxCounter();
+  const numeroCajaAsignado = String(counter).padStart(5, "0");
+  const numeroCajaCompleto = `${appConfig.boxPrefix}-${numeroCajaAsignado}`;
+
+  const truck = await getActiveTruck(
+    appConfig.reference,
+    currentUser ? `${currentUser.username} - ${currentUser.name}` : ""
+  );
+
+  setActiveTruck(truck);
+
+  if (!truck) {
+    alert("No existe ningún camión abierto.");
+    printWindow.close();
+    return;
+  }
 
   const labelData = {
     fab1: labelForm.fab1,
     col1: labelForm.col1,
     cant1: labelForm.cant1,
-
     fab2: labelForm.fab2,
     col2: labelForm.col2,
     cant2: labelForm.cant2,
-
     operario1: labelForm.operario1,
     operario2: labelForm.operario2,
     numeroCaja: numeroCajaCompleto,
-
     camionId: truck.id,
     truckNumber: truck.truck_number,
     plannedExpeditionDate: truck.planned_expedition_date,
-
     semana: numeroSemana,
     dia: numeroDia,
     totalCaja,
   };
+  
 
-  saveBoxLabelToSupabase(labelData).catch((error) => {
+  try {
+    await saveBoxLabelToSupabase(labelData);
+
+    const labels = await fetchBoxLabelsFromSupabase(truck.id);
+    setBoxLabels(labels);
+  } catch (error) {
     console.log("GUARDANDO ETIQUETA:", labelData);
     console.error("Error guardando etiqueta de caja:", error);
+    
     alert(
-      `La etiqueta se imprimirá, pero NO se ha podido guardar en el listado de cajas.\n\n${error?.message || String(error)}`
+      `La etiqueta se imprimirá, pero NO se ha podido guardar en el listado de cajas.\n\n${
+        error?.message || String(error)
+      }`
     );
-  });    
+  }
   
   const nextCounter = counter + 1;
   
@@ -2137,12 +2184,12 @@ ${error?.message || String(error)}`);
     );
   });
 
-    const printWindow = window.open("", "_blank");
+    
 
     printWindow.document.write(`
       <html>
         <head>
-          <title>Etiqueta Caja F-1012</title>
+          <title>${numeroCajaCompleto}</title>
           <style>
             body { margin: 0; padding: 20px; font-family: Arial, sans-serif; color: #000; }
             .label { width: 1100px; min-height: 650px; border: 4px solid #000; padding: 20px; }
@@ -2384,7 +2431,11 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
     
     setTimeout(() => {
       numeroPiezaInputRef.current?.focus();
-    }, 100);
+      
+      setTimeout(() => {
+        numeroPiezaInputRef.current?.focus({ preventScroll: true });
+      }, 150);
+    }, 150);
     
     showNotification(
       `Pieza ${row.numeroPieza} · ${row.resultado}`
@@ -2470,7 +2521,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
     return;
   }
 
-  const printWindow = window.open("", "_blank");
+  
 
   printWindow.document.write(`
     <html>
@@ -2822,6 +2873,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
     setBoxLabels(labels);
 
     await loadTrucksHistory();
+    await loadTruckSchedule();
 
     setShowBoxLabelsModal(true);
   } catch (error) {
@@ -2841,6 +2893,76 @@ const handleLogout = () => {
   setShowProductionStart(false);
   setCurrentUser(null);
 };
+
+async function handleCreatePlannedTruck() {
+  if (!isSupabaseConfigured || !supabase) return;
+
+  try {
+    const reference = appConfig.reference || "F-1012";
+
+    const { data: scheduleRows, error: scheduleError } = await supabase
+      .from("f1012_truck_schedule")
+      .select("truck_number")
+      .eq("reference", reference);
+
+    if (scheduleError) throw scheduleError;
+
+    const { data: truckRows, error: trucksError } = await supabase
+      .from("f1012_trucks")
+      .select("truck_number")
+      .eq("reference", reference);
+
+    if (trucksError) throw trucksError;
+
+    const allTruckNumbers = [
+      ...(scheduleRows || []).map((truck) => Number(truck.truck_number || 0)),
+      ...(truckRows || []).map((truck) => Number(truck.truck_number || 0)),
+      Number(activeTruck?.truck_number || 0),
+    ].filter((number) => number > 0);
+
+    const nextTruckNumber =
+      allTruckNumbers.length > 0
+        ? Math.max(...allTruckNumbers) + 1
+        : 1;
+
+    await createPlannedTruck(supabase, {
+      reference,
+      truckNumber: nextTruckNumber,
+      plannedExpeditionDate: null,
+      notes: "",
+      createdBy: currentUser
+        ? `${currentUser.username} - ${currentUser.name}`
+        : "",
+    });
+
+    await loadTruckSchedule();
+  } catch (error) {
+    console.error("Error creando camión planificado:", error);
+    alert(
+      `No se ha podido crear el camión planificado.\n\n${
+        error?.message || String(error)
+      }`
+    );
+  }
+}
+
+async function handleUpdatePlannedTruck(truck, updates) {
+  if (!isSupabaseConfigured || !supabase || !truck?.id) return;
+
+  await updatePlannedTruck(supabase, truck.id, updates);
+  await loadTruckSchedule();
+}
+
+async function handleDeletePlannedTruck(truck) {
+  if (!isSupabaseConfigured || !supabase || !truck?.id) return;
+
+  if (!window.confirm(`¿Eliminar camión planificado ${truck.truck_number}?`)) {
+    return;
+  }
+
+  await deletePlannedTruck(supabase, truck.id);
+  await loadTruckSchedule();
+}
 
 async function fetchOpenTruck(reference) {
   if (!isSupabaseConfigured || !supabase) return null;
@@ -2909,6 +3031,21 @@ async function loadTrucksHistory() {
   console.log("HISTÓRICO CAMIONES DESDE SUPABASE:", data);
 
   setTrucks(data);
+
+  return data;
+}
+
+async function loadTruckSchedule() {
+  if (!isSupabaseConfigured || !supabase) {
+    return [];
+  }
+
+  const data = await fetchTruckSchedule(
+    supabase,
+    appConfig.reference
+  );
+
+  setTruckSchedule(data);
 
   return data;
 }
@@ -3163,6 +3300,7 @@ async function handleSearchBox(boxNumber) {
         supabaseOnline={isSupabaseConfigured}
         now={new Date(nowMs)}
         onOpenCommand={() => setShowCommandPalette(true)}
+        onLogout={handleLogout}
       >
         <div className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-4">
@@ -3522,9 +3660,17 @@ async function handleSearchBox(boxNumber) {
                 type="button"
                 onClick={() => {
                   setLabelForm({
-                    ...labelForm,
+                    fab1: "",
+                    col1: "",
+                    cant1: "",
+                    fab2: "",
+                    col2: "",
+                    cant2: "",
+                    operario1: "",
+                    operario2: "",
                     numeroCaja: "",
                   });
+                  
                   setShowLabelModal(true);
                 }}
                 className="rounded-3xl bg-blue-600 px-5 py-5 text-base font-black text-white shadow-sm transition hover:bg-blue-700"
@@ -3867,7 +4013,6 @@ async function handleSearchBox(boxNumber) {
                   />
                 </Field>
 
-                                
                 <Field label="Número de pieza">
                   <input
                     ref={numeroPiezaInputRef}
@@ -3883,7 +4028,9 @@ async function handleSearchBox(boxNumber) {
                   />
                 </Field>
 
-              </div>
+                                
+                               
+                </div>
 
               <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
                 <div className="font-bold">Hoja de verificación actual</div>
@@ -4183,57 +4330,23 @@ async function handleSearchBox(boxNumber) {
                 ))}
               </div>
 
-              {overallOk === false && (
-                <Field label="Resumen general del rechazo (opcional)">
-                  <textarea
-                    className="input min-h-[80px] border-red-300 bg-red-50"
-                    placeholder="Describe el defecto que ha generado el rechazo..."
-                    value={form.rechazoTipo}
-                    onChange={(e) =>
-                      setForm({ ...form, rechazoTipo: e.target.value })
-                    }
-                  />
-                </Field>
-              )}
-
-              <Field label="Observaciones">
-                <textarea
-                  className="input min-h-[100px]"
-                  value={form.observaciones}
-                  onChange={(e) =>
-                    setForm({ ...form, observaciones: e.target.value })
-                  }
-                />
-              </Field>
-              
-              <ControlStatusSummary
+              <ControlProcessPanel
+                form={form}
+                setForm={setForm}
                 validation={validation}
                 overallOk={overallOk}
-              />         
+                saveRecord={saveRecord}
+                setIncidentForm={setIncidentForm}
+                setShowIncidentModal={setShowIncidentModal}
+                operatorLastBox={operatorLastBox}
+                numeroPiezaInputRef={numeroPiezaInputRef}
+                Field={Field}
+              />
 
 
-              <Button
-                onClick={saveRecord}
-                className="w-full rounded-2xl py-6 text-base shadow-md"
-              >
-                <Save className="mr-2 h-5 w-5" />
-                Guardar control de proceso
-              </Button>
-
-              <Button
-                onClick={() => {
-                  setIncidentForm((previous) => ({
-                    ...previous,
-                    numeroPieza: operatorLastBox?.lastPiece || "",
-                  }));
-                  setShowIncidentModal(true);
-                }}
-                className="w-full rounded-2xl bg-red-600 py-6 text-base text-white shadow-md"
-              >
-                <AlertTriangle className="mr-2 h-5 w-5" />
-                Registrar pieza NO OK
-              </Button>
               
+              
+                            
             </CardContent>
           </Card>
 
@@ -4249,12 +4362,21 @@ async function handleSearchBox(boxNumber) {
               />
 
               <Card className="rounded-3xl border-0 shadow-lg">
-                <CardContent className="space-y-4 p-6">
-                  <div>
-                    <div className="text-xs font-black uppercase tracking-[0.22em] text-red-600">Rechazos</div>
-                    <h2 className="mt-1 text-2xl font-black text-slate-950">Entrada pieza de rechazo</h2>
-                    <p className="mt-1 text-sm font-bold text-slate-500">Registro rápido de una pieza NO OK durante el turno.</p>
-                  </div>
+                <CardContent className="p-6">
+                  <ControlStatusSummary
+                  validation={validation}
+                  overallOk={overallOk}
+                />
+              </CardContent>
+            </Card>
+
+            <Card className="rounded-3xl border-0 shadow-lg">
+              <CardContent className="space-y-4 p-6">
+                <div>
+                  <div className="text-xs font-black uppercase tracking-[0.22em] text-red-600">Rechazos</div>
+                  <h2 className="mt-1 text-2xl font-black text-slate-950">Entrada pieza de rechazo</h2>
+                  <p className="mt-1 text-sm font-bold text-slate-500">Registro rápido de una pieza NO OK durante el turno.</p>
+                </div>
 
 
 
@@ -4830,6 +4952,21 @@ async function handleSearchBox(boxNumber) {
                     placeholder="Ej. 105"
                     value={pdfOperario}
                     onChange={(e) => setPdfOperario(e.target.value)}
+                  />
+                </Field>
+
+                <Field label="Número de pieza">
+                  <input
+                    ref={numeroPiezaInputRef}
+                    className="input text-lg font-black"
+                    value={form.numeroPieza}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        numeroPieza: e.target.value,
+                      })
+                    }
+                    placeholder="Introduce número de pieza"
                   />
                 </Field>
 
@@ -5785,9 +5922,20 @@ saveIncidentsUpdate(
     onSelectTruck={handleSelectTruck}
     onSearchBox={handleSearchBox}
     highlightBoxNumber={highlightBoxNumber}
+    truckSchedule={truckSchedule}
+    loadTruckSchedule={loadTruckSchedule}
+    onCreatePlannedTruck={handleCreatePlannedTruck}
+    onUpdatePlannedTruck={handleUpdatePlannedTruck}
+    onDeletePlannedTruck={handleDeletePlannedTruck}
+    
+
+    
+    currentUser={currentUser}
+    isAdminUser={isAdminUser}
     onClose={() => {
       setShowBoxLabelsModal(false);
       setDisplayTruck(null);
+    
     }}
   />
 )}
@@ -6909,6 +7057,8 @@ function EditRecordModal({
                 onChange={(e) => setEditForm({ ...editForm, operario: e.target.value })}
               />
             </Field>
+
+            
 
             
 
