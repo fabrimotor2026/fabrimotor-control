@@ -12,6 +12,9 @@ import Notification from "./components/common/Notification";
 import LastLabelCard from "./components/common/LastLabelCard";
 import ControlStatusSummary from "./components/common/ControlStatusSummary";
 import ReadOnlyField from "./components/common/ReadOnlyField";
+<ControlProcessPanel>
+import ControlProcessPanel from "./modules/control/ControlProcessPanel";
+</ControlProcessPanel>
 import {
   ClipboardCheck,
   Download,
