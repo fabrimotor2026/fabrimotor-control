@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useDashboard } from "../hooks/useDashboard";
 import { useTruckSelection } from "../hooks/useTruckSelection";
 import { DEFAULT_TRUCK_CAPACITY } from "../../../config/constants";
@@ -31,10 +31,6 @@ export default function SmartTruckDashboardModal({
   onCreatePlannedTruck,
   onUpdatePlannedTruck,
   onDeletePlannedTruck,
-  loadTruckSchedule,
-  createPlannedTruck,
-  updatePlannedTruck,
-  deletePlannedTruck,
   currentUser,
   isAdminUser,
 }) {
@@ -44,7 +40,18 @@ export default function SmartTruckDashboardModal({
   );
 
   const currentTruck = displayTruck || activeTruck;
-  const targetBoxes = Number(appConfig.boxesPerTruck || truckProgress?.targetBoxes || DEFAULT_TRUCK_CAPACITY);
+
+useEffect(() => {
+  setNewExpeditionDate(
+    currentTruck?.planned_expedition_date || ""
+  );
+}, [currentTruck?.id, currentTruck?.planned_expedition_date]);
+
+const targetBoxes = Number(
+  appConfig.boxesPerTruck ||
+  truckProgress?.targetBoxes ||
+  DEFAULT_TRUCK_CAPACITY
+);
   const stats = useDashboard({ boxLabels, boxLabelsSummary, targetBoxes });
   const { selectedBox, setSelectedBoxNumber } = useTruckSelection({ boxLabelsSummary, highlightBoxNumber });
 

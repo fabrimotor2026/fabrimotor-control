@@ -1,4 +1,5 @@
-export default function LastLabelCard({
+import { memo } from "react";
+function LastLabelCard({
   operatorLastBox,
   operatorShiftRecords,
   operatorShiftOk,
@@ -130,3 +131,4 @@ export default function LastLabelCard({
     </div>
   );
 }
+export default memo(LastLabelCard);

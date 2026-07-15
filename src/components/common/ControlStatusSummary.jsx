@@ -1,67 +1,116 @@
-export default function ControlStatusSummary({
+import { memo } from "react";
+import { CheckCircle2, CircleAlert, Clock3 } from "lucide-react";
+
+import FmBadge from "../../components/ui/FmBadge";
+import FmCard from "../../components/ui/FmCard";
+import FmSectionTitle from "../../components/ui/FmSectionTitle";
+
+function CounterCard({ icon, title, value, color }) {
+  const colors = {
+    green: "bg-emerald-50 text-emerald-700",
+    red: "bg-red-50 text-red-700",
+    slate: "bg-slate-100 text-slate-700",
+  };
+
+  return (
+    <div className={`rounded-2xl p-4 ${colors[color]}`}>
+      <div className="flex items-center justify-between">
+        <div className="text-xs font-black uppercase tracking-wide">
+          {title}
+        </div>
+
+        {icon}
+      </div>
+
+      <div className="mt-2 text-3xl font-black">
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function ControlStatusSummary({
   validation,
   overallOk,
 }) {
   const okCount = validation.filter((item) => item.ok).length;
 
   const nokCount = validation.filter(
-    (item) => item.value !== "" && item.value !== undefined && !item.ok
+    (item) => item.value !== "" &&
+      item.value !== undefined &&
+      !item.ok
   ).length;
 
   const pendingCount = validation.filter(
-    (item) => item.value === "" || item.value === undefined
+    (item) => item.value === "" ||
+      item.value === undefined
   ).length;
 
   return (
-    <div
-      className={`rounded-2xl border p-4 ${
-        overallOk
-          ? "border-emerald-200 bg-emerald-50"
-          : "border-red-200 bg-red-50"
-      }`}
-    >
-      <div className="mb-3 text-xs font-black uppercase tracking-wide text-slate-600">
-        Estado del control
+    <FmCard>
+
+      <div className="flex items-start justify-between gap-3">
+
+        <FmSectionTitle
+          eyebrow="Producción"
+          title="Estado del control"
+          description="Resumen de la verificación actual."
+        />
+
+        <FmBadge color={overallOk ? "green" : "red"}>
+          {overallOk ? "CONTROL OK" : "CONTROL NO OK"}
+        </FmBadge>
+
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        <div className="rounded-xl bg-white px-3 py-2">
-          <div className="text-xs font-black uppercase text-emerald-700">
-            OK
-          </div>
+      <div className="mt-5 grid gap-4 sm:grid-cols-3">
 
-          <div className="text-2xl font-black text-emerald-700">
-            {okCount}
-          </div>
+        <CounterCard
+          title="OK"
+          value={okCount}
+          color="green"
+          icon={<CheckCircle2 className="h-5 w-5" />}
+        />
+
+        <CounterCard
+          title="NO OK"
+          value={nokCount}
+          color="red"
+          icon={<CircleAlert className="h-5 w-5" />}
+        />
+
+        <CounterCard
+          title="Pendientes"
+          value={pendingCount}
+          color="slate"
+          icon={<Clock3 className="h-5 w-5" />}
+        />
+
+      </div>
+
+      <div
+        className={`mt-5 rounded-3xl border-2 p-5 text-center ${
+          overallOk
+            ? "border-emerald-200 bg-emerald-50"
+            : "border-red-200 bg-red-50"
+        }`}
+      >
+        <div className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">
+          Resultado previsto
         </div>
 
-        <div className="rounded-xl bg-white px-3 py-2">
-          <div className="text-xs font-black uppercase text-red-700">
-            NO OK
-          </div>
-
-          <div className="text-2xl font-black text-red-700">
-            {nokCount}
-          </div>
-        </div>
-
-        <div className="rounded-xl bg-white px-3 py-2">
-          <div className="text-xs font-black uppercase text-slate-500">
-            Sin medir
-          </div>
-
-          <div className="text-2xl font-black text-slate-700">
-            {pendingCount}
-          </div>
+        <div
+          className={`mt-2 text-4xl font-black ${
+            overallOk
+              ? "text-emerald-700"
+              : "text-red-700"
+          }`}
+        >
+          {overallOk ? "✔ OK" : "✖ NO OK"}
         </div>
       </div>
 
-      <div className="mt-3 rounded-xl bg-white px-4 py-3 text-center text-lg font-black">
-        Resultado previsto:{" "}
-        <span className={overallOk ? "text-emerald-700" : "text-red-700"}>
-          {overallOk ? "OK" : "NO OK"}
-        </span>
-      </div>
-    </div>
+    </FmCard>
   );
 }
+export default memo(ControlStatusSummary);

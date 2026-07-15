@@ -1,4 +1,11 @@
 import { useEffect, useState } from "react";
+import FmButton from "../../../components/ui/FmButton";
+import FmCard from "../../../components/ui/FmCard";
+import FmSectionTitle from "../../../components/ui/FmSectionTitle";
+import FmBadge from "../../../components/ui/FmBadge";
+import FmInput from "../../../components/ui/FmInput";
+import FmTextarea from "../../../components/ui/FmTextarea";
+import FmEmptyState from "../../../components/ui/FmEmptyState";
 
 function formatDate(date) {
   if (!date) return "Sin fecha";
@@ -50,31 +57,34 @@ export default function ExpeditionPlanner({
     });
   };
 
-  return (
-    <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="mb-4 flex items-start justify-between gap-3">
-        <div>
-          <h3 className="text-lg font-black text-slate-900">
-            Planificador de Expediciones
-          </h3>
-          <p className="mt-1 text-sm font-semibold text-slate-500">
-            Próximos camiones planificados por administración.
-          </p>
-        </div>
+  const orderedSchedule = [...truckSchedule].sort((a, b) => {
+  if (!a.planned_expedition_date) return 1;
+  if (!b.planned_expedition_date) return -1;
 
-        <button
-          type="button"
-          onClick={onCreatePlannedTruck}
-          className="rounded-2xl bg-blue-600 px-4 py-3 text-sm font-black text-white shadow-sm hover:bg-blue-700"
-        >
+  return a.planned_expedition_date.localeCompare(
+    b.planned_expedition_date
+  );
+});
+
+  return (
+    <FmCard>
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <FmSectionTitle
+          eyebrow="Logística"
+          title="Planificador de Expediciones"
+          description="Próximos camiones planificados por administración."
+        />
+
+        <FmButton onClick={onCreatePlannedTruck}>
           + Nuevo camión
-        </button>
-      </div>
+        </FmButton>
+        </div>
 
       {truckSchedule.length === 0 ? (
-        <div className="rounded-2xl bg-slate-50 p-5 text-sm font-semibold text-slate-500">
-          No hay expediciones planificadas.
-        </div>
+        <FmEmptyState
+          title="No hay expediciones planificadas"
+          description="Añade un nuevo camión para comenzar la planificación."
+        />
       ) : (
         <div className="overflow-hidden rounded-2xl border border-slate-200">
           <table className="w-full text-left text-sm">
@@ -89,7 +99,7 @@ export default function ExpeditionPlanner({
             </thead>
 
             <tbody>
-              {truckSchedule.map((truck) => {
+              {orderedSchedule.map((truck) => {
                 const draft = draftRows[truck.id] || {
                   plannedExpeditionDate: truck.planned_expedition_date || "",
                   notes: truck.notes || "",
@@ -103,15 +113,24 @@ export default function ExpeditionPlanner({
                     </td>
 
                     <td className="px-3 py-3">
-                      <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-black text-blue-700">
+                      <FmBadge
+                        color={
+                          truck.status === "OPEN"
+                            ? "green"
+                            : truck.status === "PLANNED"
+                            ? "blue"
+                            : "slate"
+                        }
+                      >
                         {truck.status}
-                      </span>
+                      </FmBadge>
                     </td>
 
                     <td className="px-3 py-3">
-                      <input
+                      <FmInput
                         type="date"
-                        className="rounded-xl border border-slate-200 px-3 py-2 font-bold"
+                        min={new Date().toISOString().split("T")[0]}
+                        className="font-bold"
                         value={draft.plannedExpeditionDate || ""}
                         onChange={(e) =>
                           updateDraft(
@@ -128,8 +147,8 @@ export default function ExpeditionPlanner({
                     </td>
 
                     <td className="px-3 py-3">
-                      <input
-                        className="w-full rounded-xl border border-slate-200 px-3 py-2 font-semibold"
+                      <FmTextarea
+                        rows={2}
                         value={draft.notes || ""}
                         onChange={(e) =>
                           updateDraft(truck.id, "notes", e.target.value)
@@ -141,22 +160,24 @@ export default function ExpeditionPlanner({
 
                     <td className="px-3 py-3 text-right">
                       <div className="flex justify-end gap-2">
-                        <button
-                          type="button"
+                        <FmButton
+                          variant="dark"
+                          className="text-xs px-3 py-2 min-h-0"
                           onClick={() => saveTruck(truck)}
-                          className="rounded-xl bg-slate-900 px-3 py-2 text-xs font-black text-white hover:bg-slate-700"
                         >
                           Guardar
-                        </button>
+                        </FmButton>
+                        
+
 
                         {truck.status === "PLANNED" && (
-                          <button
-                            type="button"
+                          <FmButton
+                            variant="danger"
+                            className="text-xs px-3 py-2 min-h-0"
                             onClick={() => onDeletePlannedTruck(truck)}
-                            className="rounded-xl bg-red-50 px-3 py-2 text-xs font-black text-red-700 hover:bg-red-100"
                           >
                             Eliminar
-                          </button>
+                          </FmButton>
                         )}
                       </div>
                     </td>
@@ -171,6 +192,6 @@ export default function ExpeditionPlanner({
       <div className="mt-3 text-xs font-semibold text-slate-400">
         Usuario: {currentUser?.name || currentUser?.username || "-"}
       </div>
-    </div>
+    </FmCard>
   );
 }

@@ -20,6 +20,7 @@
     "@tailwindcss/postcss": "^4.3.0",
     "autoprefixer": "latest",
     "postcss": "latest",
+    "rollup-plugin-visualizer": "^7.0.1",
     "tailwindcss": "latest"
   },
   "type": "module"

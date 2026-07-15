@@ -1,4 +1,6 @@
-export default function TruckProgress({ percent }) {
+import { memo } from "react";
+
+function TruckProgress({ percent }) {
   return (
     <div className="mt-5 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="mb-2 flex items-center justify-between text-sm font-black text-slate-700">
@@ -14,3 +16,5 @@ export default function TruckProgress({ percent }) {
     </div>
   );
 }
+
+export default memo(TruckProgress);
