@@ -3,6 +3,7 @@ export default function ConfigModal({
   configForm,
   setConfigForm,
   updateAppSetting,
+  supabase,
   currentUser,
   setAppConfig,
   onClose,
@@ -126,6 +127,7 @@ export default function ConfigModal({
 
             try {
               await updateAppSetting(
+                supabase,
                 "f1012_config",
                 configForm,
                 currentUser

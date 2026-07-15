@@ -1,3 +1,19 @@
+import {
+  deleteSharedIncident,
+  fetchSharedIncidents,
+  upsertSharedIncident,
+} from "./services/incidentService";
+import useUsers from "./modules/operators/hooks/useUsers";
+import {
+  deleteSharedUser,
+  fetchSharedUsers,
+  normalizeUser,
+  upsertSharedUser,
+} from "./services/userService";
+import {
+  fetchAppSetting,
+  updateAppSetting,
+} from "./services/settingsService";
 import { createAndPrintBoxLabel } from "./modules/labels/services/labelService";
 import {
   fetchBoxLabels,
@@ -737,179 +753,9 @@ async function deleteSharedRecord(recordId) {
   if (error) throw error;
 }
 
-async function fetchSharedIncidents() {
-  if (!isSupabaseConfigured || !supabase) return null;
-
-  const { data, error } = await supabase
-    .from("fabr_motor_incidents")
-    .select("data")
-    .order("saved_at_ms", { ascending: false });
-
-  if (error) throw error;
-
-  return (data || []).map((row) => row.data).filter(Boolean);
-}
-
-async function upsertSharedIncident(incident) {
-  if (!isSupabaseConfigured || !supabase || !incident?.id) return;
-
-  const { error } = await supabase.from("fabr_motor_incidents").upsert({
-    id: incident.id,
-    reference: incident.referencia || "F-1012",
-    machine: incident.maquina || "",
-    operator_name: incident.operario || "",
-    label_code: incident.codigoEtiqueta || incident.numeroPieza || "",
-    result: incident.chatarra || "",
-    saved_at_ms: Date.parse(incident.createdAt) || Date.now(),
-    data: incident,
-    updated_at: new Date().toISOString(),
-  });
-
-  if (error) throw error;
-}
-
-async function fetchAppSetting(key) {
-  if (!isSupabaseConfigured || !supabase) return null;
-
-  const { data, error } = await supabase
-    .from("fabrimotor_settings")
-    .select("value")
-    .eq("key", key)
-    .single();
-
-  if (error) throw error;
-
-  return data?.value || null;
-}
-
-async function updateAppSetting(key, value, updatedBy = "") {
-  if (!isSupabaseConfigured || !supabase) return;
-
-  const { error } = await supabase
-    .from("fabrimotor_settings")
-    .upsert({
-      key,
-      value,
-      updated_by: updatedBy,
-      updated_at: new Date().toISOString(),
-    });
-
-  if (error) throw error;
-}
-
-
-
-
-
-
-
-function normalizeSharedRole(role) {
-  const value = String(role || "").trim();
-
-  if (value === "Encargado") return "Responsable";
-  if (value === "Administracion") return "Administrativo";
-
-  return value || "Operario";
-}
-
-function normalizeUserForStorage(user) {
-  const password = user?.password || user?.pin || "";
-
-  return {
-    username: String(user?.username || "").trim(),
-    name: String(user?.name || "").trim(),
-    password,
-    role: normalizeSharedRole(user?.role),
-    pin: user?.pin || password,
-    active: user?.active !== false,
-  };
-}
-
-async function fetchSharedUsers() {
-  if (!isSupabaseConfigured || !supabase) return null;
-
-  const { data, error } = await supabase
-    .from("fabrimotor_users")
-    .select("*")
-    .order("username", { ascending: true });
-
-  if (error) throw error;
-
-  return (data || []).map((row) =>
-    normalizeUserForStorage({
-      username: row.username,
-      name: row.name,
-      password: row.password || row.pin || "",
-      role: row.role,
-      pin: row.pin || row.password || "",
-      active: row.active !== false,
-    })
-  );
-}
-
-async function upsertSharedUser(user) {
-  if (!isSupabaseConfigured || !supabase || !user?.username) return;
-
-  const normalizedUser = normalizeUserForStorage(user);
-
-  const { error } = await supabase.from("fabrimotor_users").upsert({
-    username: normalizedUser.username,
-    name: normalizedUser.name,
-    role: normalizedUser.role,
-    password: normalizedUser.password,
-    pin: normalizedUser.pin || normalizedUser.password,
-    active: normalizedUser.active,
-    updated_at: new Date().toISOString(),
-  });
-
-  if (error) throw error;
-}
-
-async function deleteSharedUser(username) {
-  if (!isSupabaseConfigured || !supabase || !username) return;
-
-  const { error } = await supabase
-    .from("fabrimotor_users")
-    .delete()
-    .eq("username", username);
-
-  if (error) throw error;
-}
-
-async function replaceSharedUsers(users = []) {
-  if (!isSupabaseConfigured || !supabase) return;
-
-  const { error: deleteError } = await supabase
-    .from("fabrimotor_users")
-    .delete()
-    .neq("username", "__never__");
-
-  if (deleteError) throw deleteError;
-
-  if (!users.length) return;
-
-  const rows = users
-    .map((user) => normalizeUserForStorage(user))
-    .filter((user) => user.username)
-    .map((user) => ({
-      username: user.username,
-      name: user.name,
-      role: user.role,
-      password: user.password,
-      pin: user.pin || user.password,
-      active: user.active,
-      updated_at: new Date().toISOString(),
-    }));
-
-  const { error } = await supabase.from("fabrimotor_users").upsert(rows);
-
-  if (error) throw error;
-}
-
 function isAdminUser(user) {
   return user?.role === "Administrador";
 }
-
 
 function isVerificationUser(user) {
   return user?.role === "Operario";
@@ -1059,18 +905,6 @@ export default function App() {
   const [showProductionModal, setShowProductionModal] = useState(false);
   const [activeWorkspaceModule, setActiveWorkspaceModule] = useState("dashboard");
 
-  const [appUsers, setAppUsers] = useState(() => getStoredUsers());
-
-  const [adminSearch, setAdminSearch] = useState("");
-  
-  const [adminUserForm, setAdminUserForm] = useState({
-    username: "",
-    name: "",
-    password: "",
-    role: "Operario",
-  });
-  
-  const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [form, setForm] = useState(initialForm());
   const [values, setValues] = useState({});
   const [timerStart, setTimerStart] = useState(null);
@@ -1162,18 +996,6 @@ export default function App() {
   piecesPerBox: appConfig.piecesPerBox,
 });
 
-const operatorUsers = appUsers
-  .filter((user) => user.role === "Operario")
-  .sort((a, b) =>
-    String(a.username).localeCompare(String(b.username))
-  );
-
-  async function getActiveTruck(reference, createdBy = "") {
-  if (!isSupabaseConfigured || !supabase) return null;
-
-  return await getActiveTruckFromService(supabase, reference, createdBy);
-}
-
 async function updateTruckExpeditionDate(truckId, newDate) {
   if (!isSupabaseConfigured || !supabase) return;
 
@@ -1263,40 +1085,11 @@ async function updateTruckExpeditionDate(truckId, newDate) {
 useEffect(() => {
   let cancelled = false;
 
-  const loadAppConfig = async () => {
-    try {
-      const config = await fetchAppSetting("f1012_config");
-
-      if (cancelled || !config) return;
-
-      setAppConfig((previous) => ({
-        ...previous,
-        ...config,
-      }));
-    } catch (error) {
-      console.error("No se ha podido cargar configuración F-1012:", error);
-    }
-  };
-
-  loadAppConfig();
-
-  return () => {
-    cancelled = true;
-  };
-}, []);
-
-  useEffect(() => {
-    setConfigForm(appConfig);
-  }, [appConfig]);
-
-useEffect(() => {
-  let cancelled = false;
-
   const loadSharedIncidents = async () => {
     if (!isSupabaseConfigured || !supabase) return;
 
     try {
-      const sharedIncidents = await fetchSharedIncidents();
+      const sharedIncidents = await fetchSharedIncidents(supabase);
 
       if (cancelled || !Array.isArray(sharedIncidents)) return;
 
@@ -1333,7 +1126,7 @@ useEffect(() => {
         console.log("CAMBIO DETECTADO EN INCIDENTES");
 
         try {
-          const sharedIncidents = await fetchSharedIncidents();
+          const sharedIncidents = await fetchSharedIncidents(supabase);
 
           if (Array.isArray(sharedIncidents)) {
             setIncidents(sharedIncidents);
@@ -1419,8 +1212,7 @@ useEffect(() => {
     pesoKg: "",
     costeKg: "",
   });
-  
-
+ 
   const [currentUser, setCurrentUser] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem("fabrimotor-current-user") || "null");
@@ -1429,14 +1221,32 @@ useEffect(() => {
     }
   });
 
+  const {
+    appUsers,
+    setAppUsers,
+    operatorUsers,
+    adminFilteredUsers,
+    adminSearch,
+    setAdminSearch,
+    adminUserForm,
+    setAdminUserForm,
+    showAdminPanel,
+    setShowAdminPanel,
+    usersMode,
+    lastUsersSyncAt,
+    saveAdminUser: saveAdminUserFromHook,
+    editAdminUser,
+    deleteAdminUser: deleteAdminUserFromHook,
+    resetAdminUserForm,
+    refreshSharedUsers: refreshSharedUsersFromHook,
+  } = useUsers({
+    supabase,
+    isSupabaseConfigured,
+    defaultUsers: USERS,
+  });
   
   const [databaseMode, setDatabaseMode] = useState(isSupabaseConfigured ? "Conectando..." : "Local");
   const [lastSyncAt, setLastSyncAt] = useState("");
-  const [usersMode, setUsersMode] = useState(isSupabaseConfigured ? "Conectando..." : "Local");
-  const [lastUsersSyncAt, setLastUsersSyncAt] = useState("");
-
-  
-
   const [showProductionStart, setShowProductionStart] = useState(() => {
     try {
       const storedUser = JSON.parse(localStorage.getItem("fabrimotor-current-user") || "null");
@@ -1532,40 +1342,6 @@ useEffect(() => {
     }
   };
 
-
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const loadSharedUsers = async () => {
-      if (!isSupabaseConfigured) {
-        setUsersMode("Local");
-        return;
-      }
-
-      try {
-        setUsersMode("Conectando...");
-        const sharedUsers = await fetchSharedUsers();
-
-        if (cancelled || !Array.isArray(sharedUsers) || sharedUsers.length === 0) return;
-
-        setAppUsers(sharedUsers);
-        saveStoredUsers(sharedUsers);
-        setUsersMode("Compartidos");
-        setLastUsersSyncAt(new Date().toLocaleString("es-ES"));
-      } catch (error) {
-        console.error("No se han podido cargar usuarios de Supabase:", error);
-        setUsersMode("Local sin conexión");
-      }
-    };
-
-    loadSharedUsers();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   const refreshSharedUsers = async () => {
     if (!isSupabaseConfigured) {
       alert("Los usuarios compartidos no están configurados. La aplicación está trabajando con usuarios locales.");
@@ -1574,7 +1350,7 @@ useEffect(() => {
 
     try {
       setUsersMode("Conectando...");
-      const sharedUsers = await fetchSharedUsers();
+      const sharedUsers = await fetchSharedUsers(supabase);
       const nextUsers = Array.isArray(sharedUsers) && sharedUsers.length > 0 ? sharedUsers : getStoredUsers();
 
       setAppUsers(nextUsers);
@@ -1958,7 +1734,7 @@ const validation = useMemo(() => {
     }
 
     try {
-      await upsertSharedUser(user);
+      await upsertSharedUser(supabase, user);
       setUsersMode("Compartidos");
       setLastUsersSyncAt(new Date().toLocaleString("es-ES"));
       return true;
@@ -1976,7 +1752,7 @@ ${error?.message || String(error)}`);
     if (!isSupabaseConfigured) return;
 
     try {
-      await deleteSharedUser(username);
+      await deleteSharedUser(supabase, username);
       setUsersMode("Compartidos");
       setLastUsersSyncAt(new Date().toLocaleString("es-ES"));
     } catch (error) {
@@ -1998,6 +1774,32 @@ ${error?.message || String(error)}`);
       numeroDia,
       resolveActiveTruck: getActiveTruck,
     });
+
+    const saveAdminUser = async () => {
+  try {
+    const result = await saveAdminUserFromHook();
+
+    if (!result.shared) {
+      alert("Usuario guardado localmente.");
+    }
+
+  } catch (error) {
+
+    alert(
+      error?.message ||
+      "No se pudo guardar el usuario."
+    );
+
+  }
+};
+
+const refreshSharedUsers = async () => {
+  try {
+    await refreshSharedUsersFromHook();
+  } catch (error) {
+    alert(error.message);
+  }
+};
 
     setActiveTruck(result.truck);
 
@@ -2064,10 +1866,16 @@ ${error?.message || String(error)}`);
       JSON.stringify(nextIncidents)
     );
     
-    upsertSharedIncident(newIncident).catch((error) => {
+    upsertSharedIncident(
+      supabase,
+      newIncident
+    ).catch((error) => {
       console.error("Error guardando incidencia en Supabase:", error);
+      
       alert(
-        `La incidencia se ha guardado en este dispositivo, pero NO se ha podido sincronizar con la base compartida.\n\n${error?.message || String(error)}`
+        `La incidencia se ha guardado en este dispositivo, pero NO se ha podido sincronizar con la base compartida.\n\n${
+          error?.message || String(error)
+        }`
       );
     });
     
@@ -2099,7 +1907,10 @@ ${error?.message || String(error)}`);
         );
         
         if (updatedIncident) {
-          upsertSharedIncident(updatedIncident).catch((error) => {
+          upsertSharedIncident(
+            supabase,
+            updatedIncident
+          ).catch((error) => {
             console.error(error);
             
             alert(
@@ -2107,10 +1918,9 @@ ${error?.message || String(error)}`);
                 error?.message || String(error)
               }`
             );
-          }
-        );
-      }
-    };
+          });
+        }
+      };
     
     const showNotification = (message, type = "success", duration = 2500) => {
       setNotification({ message, type });
@@ -2906,56 +2716,24 @@ async function handleSearchBox(boxNumber) {
     setShowProductionStart(false);
   };
 
-  const adminFilteredUsers = appUsers.filter((user) => {
-    const query = adminSearch.trim().toLowerCase();
-    if (!query) return true;
+  const saveAdminUser = async () => {
+  try {
+    const result = await saveAdminUserFromHook();
 
-    return (
-      String(user.username || "").toLowerCase().includes(query) ||
-      String(user.name || "").toLowerCase().includes(query) ||
-      String(user.role || "").toLowerCase().includes(query)
-    );
-  });
-
-  const saveAdminUser = () => {
-    const username = adminUserForm.username.trim();
-    const name = adminUserForm.name.trim();
-    const password = adminUserForm.password.trim();
-    const role = adminUserForm.role || "Operario";
-
-    if (!username || !name || !password) {
-      alert("Debe indicar nº operario, nombre y contraseña.");
-      return;
+    if (!result?.shared) {
+      alert("Usuario guardado localmente.");
     }
+  } catch (error) {
+    console.error("Error guardando usuario:", error);
 
-    const userToSave = normalizeUserForStorage({ username, name, password, role });
-    const exists = appUsers.some((user) => user.username === username);
-    const nextUsers = exists
-      ? appUsers.map((user) =>
-          user.username === username ? userToSave : user
-        )
-      : [...appUsers, userToSave];
+    alert(
+      error?.message ||
+        "No se ha podido guardar el usuario."
+    );
+  }
+};
 
-    setAppUsers(nextUsers);
-    saveStoredUsers(nextUsers);
-    saveUserToSharedDatabase(userToSave);
-    setAdminUserForm({
-      username: "",
-      name: "",
-      password: "",
-      role: "Operario",
-    });
-  };
-
-  const editAdminUser = (user) => {
-    setAdminUserForm({
-      username: user.username,
-      name: user.name,
-      password: user.password || user.pin || "",
-      role: user.role,
-    });
-  };
-
+  
   const deleteAdminUser = (username) => {
     if (username === currentUser?.username) {
       alert("No puedes eliminar el usuario con la sesión abierta.");
@@ -2969,17 +2747,6 @@ async function handleSearchBox(boxNumber) {
     saveStoredUsers(nextUsers);
     deleteUserFromSharedDatabase(username);
   };
-
-  const resetAdminUserForm = () => {
-    setAdminUserForm({
-      username: "",
-      name: "",
-      password: "",
-      role: "Operario",
-    });
-  };
-
-
   useEffect(() => {
     const handleCommandShortcut = (event) => {
       const isCommandShortcut = (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k";
@@ -3030,7 +2797,6 @@ async function handleSearchBox(boxNumber) {
       setShowConfigModal(true);
     }
   };
-
 
   const dashboardStats = {
     totalRegistros: records?.length || 0,
@@ -3728,7 +3494,8 @@ async function handleSearchBox(boxNumber) {
                     onClick={() => {
                       setIncidentForm((previous) => ({
                         ...previous,
-                        numeroPieza: previous.numeroPieza || form.numeroPieza || "",
+                        codigoEtiqueta:
+                        previous.codigoEtiqueta || form.numeroPieza || "",
                       }));
                       setShowIncidentModal(true);
                     }}
@@ -4215,16 +3982,16 @@ async function handleSearchBox(boxNumber) {
       {showCpkModal && (
         <Suspense fallback={<ModuleLoadingFallback />}>
           <CpkModalComponent
-            records={records}
-            onClose={() => setShowCpkModal(false)}
-            dateFrom={cpkDateFrom}
-            setDateFrom={setCpkDateFrom}
-            dateTo={cpkDateTo}
-            setDateTo={setCpkDateTo}
-            turno={cpkTurno}
-            setTurno={setCpkTurno}
-            operario={cpkOperario}
-            setOperario={setCpkOperario}
+           records={records}
+           onClose={() => setShowCpkModal(false)}
+           dateFrom={cpkDateFrom}
+           setDateFrom={setCpkDateFrom}
+           dateTo={cpkDateTo}
+           setDateTo={setCpkDateTo}
+           turno={cpkTurno}
+           setTurno={setCpkTurno}
+           operario={cpkOperario}
+           setOperario={setCpkOperario}
           />
         </Suspense>
       )}
@@ -4279,22 +4046,47 @@ async function handleSearchBox(boxNumber) {
                   </div>
                   
                   <div className="grid gap-3 sm:grid-cols-3">
-                    <ReadOnlyField
-                      label="Código etiqueta"
-                      value={incidentForm.codigoEtiqueta}
-                    />
+                    <Field label="Código etiqueta">
+                      <input
+                        className="input text-base font-bold text-slate-900"
+                        value={incidentForm.codigoEtiqueta || ""}
+                        onChange={(e) =>
+                          setIncidentForm({
+                            ...incidentForm,
+                            codigoEtiqueta: e.target.value,
+                          })
+                        }
+                      />
+                    </Field>
                     
-                    <ReadOnlyField
-                      label="Nº fabricación"
-                      value={incidentForm.numeroFabricacion}
-                    />
+                    <Field label="Nº fabricación">
+                      <input
+                        className="input text-base font-bold text-slate-900"
+                        value={incidentForm.numeroFabricacion || ""}
+                        onChange={(e) =>
+                          setIncidentForm({
+                            ...incidentForm,
+                            numeroFabricacion: e.target.value,
+                          })
+                        }
+                      />
+                    </Field>
                     
-                    <ReadOnlyField
-                      label="Nº colada"
-                      value={incidentForm.numeroColada}
-                    />
+                    <Field label="Nº colada">
+                      <input
+                        className="input text-base font-bold text-slate-900"
+                        value={incidentForm.numeroColada || ""}
+                        onChange={(e) =>
+                          setIncidentForm({
+                            ...incidentForm,
+                            numeroColada: e.target.value,
+                          })
+                        }
+                      />
+                    </Field>
                   </div>
                 </div>
+              
                 
                   <Field label="Tipo de fallo">
                     <select
@@ -5107,6 +4899,7 @@ saveIncidentsUpdate(
       configForm={configForm}
       setConfigForm={setConfigForm}
       updateAppSetting={updateAppSetting}
+      supabase={supabase}
       currentUser={currentUser}
       setAppConfig={setAppConfig}
       onClose={() => setShowConfigModal(false)}
