@@ -1,6 +1,7 @@
 import { Printer, X } from "lucide-react";
 import { Button } from "../ui/button";
 import Field from "../common/Field";
+import PdfMachineReport from "./PdfMachineReport";
 import {
   MACHINES,
   MODAL_OVERLAY_STYLE,

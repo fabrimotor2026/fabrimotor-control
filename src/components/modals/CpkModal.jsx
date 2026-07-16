@@ -2,6 +2,7 @@ import { X } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from "recharts";
 import { Button } from "../ui/button";
 import Field from "../common/Field";
+import { useEffect, useState } from "react";
 import { MACHINES, MODAL_OVERLAY_STYLE, MODAL_PANEL_XL_STYLE } from "../../data/constants";
 
 function calculateCpk(values, lsl, usl) {
@@ -51,6 +52,26 @@ export default function CpkModal({
   operario,
   setOperario,
 }) {
+  const [chartReady, setChartReady] = useState(false);
+
+useEffect(() => {
+  let frame1;
+  let frame2;
+
+  frame1 = window.requestAnimationFrame(() => {
+    frame2 = window.requestAnimationFrame(() => {
+      setChartReady(true);
+    });
+  });
+
+  return () => {
+    window.cancelAnimationFrame(frame1);
+
+    if (frame2) {
+      window.cancelAnimationFrame(frame2);
+    }
+  };
+}, []);
   const c30 = MACHINES["Torno Hyundai"].find((item) => item.id === "c30");
   const c40 = MACHINES["Torno Hyundai"].find((item) => item.id === "c40");
 
@@ -191,28 +212,100 @@ export default function CpkModal({
                 No hay registros de las cotas Nº30 y Nº40 para calcular el CPK.
               </div>
             ) : (
-              <div className="h-[420px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData} margin={{ top: 10, right: 20, left: 0, bottom: 20 }}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="registro" label={{ value: "Registro", position: "insideBottom", offset: -10 }} />
-                    <YAxis domain={[30, 70]} label={{ value: "Valor comparador", angle: -90, position: "insideLeft" }} />
-                    <Tooltip
-                      formatter={(value, name) => [value, name === "c30" ? "Cota Nº30" : "Cota Nº40"]}
-                      labelFormatter={(label) => {
-                        const row = chartData[label - 1];
-                        return row ? `Registro ${label} · Pieza ${row.pieza || ""} · ${row.fecha || ""} ${row.hora || ""}` : `Registro ${label}`;
-                      }}
-                    />
-                    <Legend />
-                    <ReferenceLine y={38} stroke="red" strokeDasharray="5 5" label="LSL +38" />
-                    <ReferenceLine y={63} stroke="red" strokeDasharray="5 5" label="USL +63" />
-                    <Line type="monotone" dataKey="c30" name="Cota Nº30" strokeWidth={3} dot={{ r: 4 }} connectNulls />
-                    <Line type="monotone" dataKey="c40" name="Cota Nº40" strokeWidth={3} dot={{ r: 4 }} connectNulls />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            )}
+              <div
+                className="w-full min-w-0"
+                style={{
+                  width: "100%",
+                  minWidth: 0,
+                  height: 360,
+                }}
+              >
+                {chartReady ? (
+                  <ResponsiveContainer
+                    width="100%"
+                    height={360}
+                    minWidth={300}
+                    debounce={50}
+                  >
+                    <LineChart data={chartData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      
+                      <XAxis
+                        dataKey="registro"
+                        label={{
+                          value: "Registro",
+                          position: "insideBottom",
+                          offset: -10,
+                        }}
+                      />
+                      
+                      <YAxis
+                        domain={[30, 70]}
+                        label={{
+                          value: "Valor comparador",
+                          angle: -90,
+                          position: "insideLeft",
+                        }}
+                      />
+                      
+                      <Tooltip
+                        formatter={(value, name) => [
+                          value,
+                          name === "c30" ? "Cota Nº30" : "Cota Nº40",
+                        ]}
+                        labelFormatter={(label) => {
+                          const row = chartData[label - 1];
+                          
+                          return row
+                            ? `Registro ${label} · Pieza ${
+                                row.pieza || ""
+                              } · ${row.fecha || ""} ${row.hora || ""}`
+                            : `Registro ${label}`;
+                          }}
+                        />
+                        
+                        <Legend />
+                        
+                        <ReferenceLine
+                          y={38}
+                          stroke="red"
+                          strokeDasharray="5 5"
+                          label="LSL +38"
+                        />
+                        
+                        <ReferenceLine
+                          y={63}
+                          stroke="red"
+                          strokeDasharray="5 5"
+                          label="USL +63"
+                        />
+                        
+                        <Line
+                          type="monotone"
+                          dataKey="c30"
+                          name="Cota Nº30"
+                          strokeWidth={3}
+                          dot={{ r: 4 }}
+                          connectNulls
+                        />
+                        
+                        <Line
+                          type="monotone"
+                          dataKey="c40"
+                          name="Cota Nº40"
+                          strokeWidth={3}
+                          dot={{ r: 4 }}
+                          connectNulls
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="flex h-[360px] items-center justify-center text-sm font-semibold text-slate-500">
+                      Preparando gráfico…
+                    </div>
+                  )}
+                </div>
+              )}
           </div>
         </div>
       </div>

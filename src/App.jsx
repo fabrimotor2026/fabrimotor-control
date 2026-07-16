@@ -1,4 +1,11 @@
 import {
+  deleteSharedRecord,
+  fetchSharedRecords,
+  upsertSharedRecord,
+} from "./services/recordService";
+import useIncidentStats from "./modules/incidents/hooks/useIncidentStats";
+import useIncidents from "./modules/incidents/hooks/useIncidents";
+import {
   deleteSharedIncident,
   fetchSharedIncidents,
   upsertSharedIncident,
@@ -708,51 +715,6 @@ function saveStoredUsers(users) {
   localStorage.setItem("fabrimotor-users", JSON.stringify(users || []));
 }
 
-
-async function fetchSharedRecords() {
-  if (!isSupabaseConfigured || !supabase) return null;
-
-  const { data, error } = await supabase
-    .from("fabrimotor_records")
-    .select("data")
-    .order("saved_at_ms", { ascending: false });
-
-  if (error) throw error;
-  
-  return (data || []).map((row) => row.data).filter(Boolean);
-}
-
-async function upsertSharedRecord(record) {
-  if (!isSupabaseConfigured || !supabase || !record?.id) return;
-  
-  const { error } = await supabase.from("fabrimotor_records").upsert({
-    id: record.id,
-    reference: record.referencia || "F-1012",
-    machine: record.maquina || "",
-    operator_user: record.usuarioSistema || "",
-    operator_name: record.operario || "",
-    piece_number: String(record.numeroPieza || ""),
-    work_order: record.ordenFabricacion || "",
-    lot: record.lote || "",
-    result: record.resultado || "",
-    saved_at_ms: record.savedAtMs || Date.now(),
-    data: record,
-  });
-
-  if (error) throw error;
-}
-
-async function deleteSharedRecord(recordId) {
-  if (!isSupabaseConfigured || !supabase || !recordId) return;
-
-  const { error } = await supabase
-    .from("fabrimotor_records")
-    .delete()
-    .eq("id", recordId);
-
-  if (error) throw error;
-}
-
 function isAdminUser(user) {
   return user?.role === "Administrador";
 }
@@ -890,6 +852,37 @@ function ModuleLoadingFallback() {
   );
 }
 export default function App() {
+  const {
+  incidents,
+  setIncidents,
+
+  incidentForm,
+  setIncidentForm,
+  resetIncidentForm,
+
+  showIncidentModal,
+  setShowIncidentModal,
+  openIncidentModal,
+  closeIncidentModal,
+
+  showIncidentsListModal,
+  setShowIncidentsListModal,
+  openIncidentsListModal,
+  closeIncidentsListModal,
+
+  show8DModal,
+  setShow8DModal,
+
+  selected8D,
+  setSelected8D,
+
+  addIncident,
+  saveIncidentsUpdate: saveIncidentsUpdateFromHook,
+} = useIncidents({
+  supabase,
+  isSupabaseConfigured,
+});
+
   const [notification, setNotification] = useState(null);
 
   const numeroPiezaInputRef = useRef(null);
@@ -906,6 +899,21 @@ export default function App() {
   const [activeWorkspaceModule, setActiveWorkspaceModule] = useState("dashboard");
 
   const [form, setForm] = useState(initialForm());
+  const {
+    currentDateIncidents,
+    currentMonthIncidents,
+    qualityCostToday,
+    qualityCostMonth,
+    scrapPiecesMonth,
+    totalIncidencias,
+    accionesAbiertas,
+    accionesCerradas,
+    costeTotalCalidad,
+    pendingIncidents,
+  } = useIncidentStats({
+    incidents,
+    selectedDate: form.fecha,
+  });
   const [values, setValues] = useState({});
   const [timerStart, setTimerStart] = useState(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -944,10 +952,6 @@ export default function App() {
     }
   });
 
-  const [showIncidentModal, setShowIncidentModal] = useState(false);
-  const [showIncidentsListModal, setShowIncidentsListModal] = useState(false);
-  const [show8DModal, setShow8DModal] = useState(false);
-  const [selected8D, setSelected8D] = useState(null);
   const [showConfigModal, setShowConfigModal] = useState(false);
   
   const [configForm, setConfigForm] = useState({
@@ -1073,86 +1077,6 @@ async function updateTruckExpeditionDate(truckId, newDate) {
     `Camión ${activeTruck.truck_number} cerrado correctamente.\n\nNuevo camión activo: ${newTruck.truck_number}`
   );
 }
- 
-  const [incidents, setIncidents] = useState(() => {
-  try {
-    return JSON.parse(localStorage.getItem("f1012-incidents") || "[]");
-  } catch {
-    return [];
-  }
-});
-
-useEffect(() => {
-  let cancelled = false;
-
-  const loadSharedIncidents = async () => {
-    if (!isSupabaseConfigured || !supabase) return;
-
-    try {
-      const sharedIncidents = await fetchSharedIncidents(supabase);
-
-      if (cancelled || !Array.isArray(sharedIncidents)) return;
-
-      setIncidents(sharedIncidents);
-      localStorage.setItem(
-        "f1012-incidents",
-        JSON.stringify(sharedIncidents)
-      );
-    } catch (error) {
-      console.error("No se han podido cargar incidencias de Supabase:", error);
-    }
-  };
-
-  loadSharedIncidents();
-
-  return () => {
-    cancelled = true;
-  };
-}, []);
-
-useEffect(() => {
-  if (!isSupabaseConfigured || !supabase) return;
-
-  const channel = supabase
-    .channel("fabr_motor_incidents_realtime")
-    .on(
-      "postgres_changes",
-      {
-        event: "*",
-        schema: "public",
-        table: "fabr_motor_incidents",
-      },
-      async () => {
-        console.log("CAMBIO DETECTADO EN INCIDENTES");
-
-        try {
-          const sharedIncidents = await fetchSharedIncidents(supabase);
-
-          if (Array.isArray(sharedIncidents)) {
-            setIncidents(sharedIncidents);
-            localStorage.setItem(
-              "f1012-incidents",
-              JSON.stringify(sharedIncidents)
-            );
-          }
-        } catch (error) {
-          console.error("Error actualizando incidencias en tiempo real:", error);
-        }
-      }
-    )
-    .subscribe((status, error) => {
-      console.log("Realtime incidents status:", status);
-
-      if (error) {
-        console.error("Realtime incidents error:", error);
-      }
-    });
-
-  return () => {
-    supabase.removeChannel(channel);
-  };
-}, []);
-
 useEffect(() => {
   if (!isSupabaseConfigured || !supabase) return;
 
@@ -1169,7 +1093,7 @@ useEffect(() => {
         console.log("CAMBIO DETECTADO EN REGISTROS");
 
         try {
-          const sharedRecords = await fetchSharedRecords();
+          const sharedRecords = await fetchSharedRecords(supabase);
 
           if (Array.isArray(sharedRecords)) {
             setRecords(sharedRecords);
@@ -1196,23 +1120,6 @@ useEffect(() => {
   };
 }, []);
 
-
-
-  const [incidentForm, setIncidentForm] = useState({
-    codigoEtiqueta: "",
-    numeroFabricacion: "",
-    numeroColada: "",
-    tipoFallo: "Mecanizado",
-    descripcion: "",
-    piezasAfectadas: "1",
-    piezaAnterior: "",
-    piezaPosterior: "",
-    recuperable: "NO",
-    chatarra: "SI",
-    pesoKg: "",
-    costeKg: "",
-  });
- 
   const [currentUser, setCurrentUser] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem("fabrimotor-current-user") || "null");
@@ -1299,7 +1206,7 @@ useEffect(() => {
 
       try {
         setDatabaseMode("Conectando...");
-        const sharedRecords = await fetchSharedRecords();
+        const sharedRecords = await fetchSharedRecords(supabase);
 
         if (cancelled || !Array.isArray(sharedRecords)) return;
 
@@ -1329,7 +1236,7 @@ useEffect(() => {
 
     try {
       setDatabaseMode("Conectando...");
-      const sharedRecords = await fetchSharedRecords();
+      const sharedRecords = await fetchSharedRecords(supabase);
       setRecords(sharedRecords || []);
       localStorage.setItem("f1012-zona-b", JSON.stringify(sharedRecords || []));
       setDatabaseMode("Compartida");
@@ -1696,15 +1603,13 @@ const validation = useMemo(() => {
   };
 
   const requestAccessCode = () => {
-    const code = window.prompt("Introduce el código de acceso:");
+  if (!isAdminUser(currentUser)) {
+    alert("Solo los administradores pueden editar o eliminar registros.");
+    return false;
+  }
 
-    if (code !== ACCESS_CODE) {
-      alert("Código incorrecto. No tienes permiso para realizar esta acción.");
-      return false;
-    }
-
-    return true;
-  };
+  return true;
+};
 
   const saveLocal = (next) => {
     setRecords(next);
@@ -1715,7 +1620,10 @@ const validation = useMemo(() => {
     if (!isSupabaseConfigured) return;
 
     try {
-      await upsertSharedRecord(record);
+      await upsertSharedRecord(
+        supabase,
+        record
+      )
       setDatabaseMode("Compartida");
       setLastSyncAt(new Date().toLocaleString("es-ES"));
     } catch (error) {
@@ -1860,17 +1768,8 @@ const refreshSharedUsers = async () => {
       createdAt: new Date().toISOString(),
     };
     
-    const nextIncidents = [newIncident, ...incidents];
-    setIncidents(nextIncidents);
-      localStorage.setItem("f1012-incidents", 
-      JSON.stringify(nextIncidents)
-    );
-    
-    upsertSharedIncident(
-      supabase,
-      newIncident
-    ).catch((error) => {
-      console.error("Error guardando incidencia en Supabase:", error);
+    addIncident(newIncident).catch((error) => {
+      console.error("Error guardando incidencia:", error);
       
       alert(
         `La incidencia se ha guardado en este dispositivo, pero NO se ha podido sincronizar con la base compartida.\n\n${
@@ -1878,48 +1777,30 @@ const refreshSharedUsers = async () => {
         }`
       );
     });
-    
-    setIncidentForm({
-      numeroPieza: "",
-      tipoFallo: "Mecanizado",
-      descripcion: "",
-      piezasAfectadas: "1",
-      piezaAnterior: "",
-      piezaPosterior: "",
-      recuperable: "NO",
-      chatarra: "SI",
-      pesoKg: "",
-      costeKg: "",
-    });
-    
-    setShowIncidentModal(false);
+
+    resetIncidentForm();
+    closeIncidentModal();
   };
   
       const saveIncidentsUpdate = (
         nextIncidents,
         updatedIncident
       ) => {
-        setIncidents(nextIncidents);
-        
-        localStorage.setItem(
-          "f1012-incidents",
-          JSON.stringify(nextIncidents)
-        );
-        
-        if (updatedIncident) {
-          upsertSharedIncident(
-            supabase,
-            updatedIncident
-          ).catch((error) => {
-            console.error(error);
-            
-            alert(
-              `Error sincronizando incidencia:\n\n${
-                error?.message || String(error)
-              }`
-            );
-          });
-        }
+        saveIncidentsUpdateFromHook(
+          nextIncidents,
+          updatedIncident
+        ).catch((error) => {
+          console.error(
+            "Error sincronizando incidencia:",
+            error
+          );
+          
+          alert(
+            `Error sincronizando incidencia:\n\n${
+              error?.message || String(error)
+            }`
+          );
+        });
       };
     
     const showNotification = (message, type = "success", duration = 2500) => {
@@ -2020,7 +1901,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
     const next = records.filter((r) => r.id !== id);
     saveLocal(next);
 
-    deleteSharedRecord(id).catch((error) => {
+    deleteSharedRecord(supabase, id).catch((error) => {
       console.error("Error eliminando en base compartida:", error);
       alert(`Registro eliminado en este dispositivo, pero no se ha podido eliminar en la base compartida:\n\n${error?.message || String(error)}`);
     });
@@ -2358,10 +2239,29 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
     };
 
     const next = records.map((record) =>
-      record.id === editingRecord.id ? updatedRecord : record
+      record.id === editingRecord.id
+        ? updatedRecord
+        : record
     );
-
+    
     saveLocal(next);
+    
+    upsertSharedRecord(
+      supabase,
+      updatedRecord
+    ).catch((error) => {
+      console.error(
+        "Error actualizando registro compartido:",
+        error
+      );
+      
+      alert(
+        `El registro se ha actualizado en este dispositivo, pero no se ha podido sincronizar con la base compartida.\n\n${
+          error?.message || String(error)
+        }`
+      );
+    });
+
     closeEditRecord();
   };
 
@@ -2369,53 +2269,7 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
   const currentDateOk = currentDateRecords.filter((record) => record.resultado === "OK").length;
   const currentDateNok = currentDateRecords.filter((record) => record.resultado === "NO OK").length;
   const recentRecords = records.slice(0, 6);
-  const currentMonthKey = form.fecha.slice(0, 7);
-
-  const currentDateIncidents = incidents.filter(
-    (incident) => incident.fecha === form.fecha
-  );
-
-  const currentMonthIncidents = incidents.filter((incident) =>
-    String(incident.fecha || "").startsWith(currentMonthKey)
-);
-
-  const qualityCostToday = currentDateIncidents.reduce(
-    (sum, incident) => sum + Number(incident.costeTotal || 0),
-    0
-  );
-
-  const qualityCostMonth = currentMonthIncidents.reduce(
-    (sum, incident) => sum + Number(incident.costeTotal || 0),
-    0
-  );
-
-  const scrapPiecesMonth = currentMonthIncidents
-    .filter((incident) => incident.chatarra === "SI")
-    .reduce(
-      (sum, incident) => sum + Number(incident.piezasAfectadas || 0),
-      0
-    );
-
-  const totalIncidencias = incidents.length;
   
-  const accionesAbiertas = incidents.filter(
-    (i) => i.estadoAccion === "Abierta"
-  ).length;
-  
-  const accionesCerradas = incidents.filter(
-    (i) => i.estadoAccion === "Cerrada"
-  ).length;
-  
-  const costeTotalCalidad = incidents.reduce(
-    (sum, item) => sum + Number(item.costeTotal || 0),
-    0
-  );
-
-  const pendingIncidents = incidents.filter(
-    (incident) =>
-      (incident.estadoCalidad || "Pendiente") === "Pendiente"
-  ).length;
-
   const handleLogin = (user) => {
     setCurrentUser(user);
     localStorage.setItem("fabrimotor-current-user", JSON.stringify(user));
@@ -3920,27 +3774,33 @@ async function handleSearchBox(boxNumber) {
                                   size="sm"
                                   variant="outline"
                                   onClick={() => {
-                                    if (requestAccessCode()) {
-                                      openEditRecord(r);
+                                    if (
+                                      currentUser?.role !== "Administrador" &&
+                                      currentUser?.role !== "Calidad"
+                                    ) {
+                                      alert(
+                                        "Solo los usuarios con rol Administrador o Calidad pueden editar registros."
+                                      );
+                                      return;
                                     }
+                                    
+                                    openEditRecord(r);
                                   }}
                                   title="Editar registro"
                                 >
                                   <Pencil className="h-4 w-4" />
                                 </Button>
 
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => {
-                                    if (requestAccessCode()) {
-                                      removeRecord(r.id);
-                                    }
-                                  }}
-                                  title="Eliminar registro"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
+                                {isAdminUser(currentUser) && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => removeRecord(r.id)}
+                                    title="Eliminar registro"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                )}
                               </div>
                             </td>
                           </tr>
@@ -4958,7 +4818,10 @@ saveIncidentsUpdate(
       {showRejectsModal && (
         <Suspense fallback={<ModuleLoadingFallback />}>
           <RejectsModalComponent
-            {...lasPropsQueYaTienes}
+            records={records}
+            getRejectedChecks={getRejectedChecks}
+            buildSheetName={buildReportSheetName}
+            onClose={() => setShowRejectsModal(false)}
           />
         </Suspense>
       )}
