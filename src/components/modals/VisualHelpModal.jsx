@@ -1,6 +1,6 @@
 import { X } from "lucide-react";
 import { Button } from "../ui/button";
-import { VISUAL_HELP_IMAGES } from "../../modules/visualHelp/visualHelpImages.js";
+import { VISUAL_HELP_IMAGES } from "../../modules/visualHelp/VisualHelpImages.js";
 
 export default function VisualHelpModal({ item, onClose }) {
   const showVideo = item?.id === "c30" || item?.id === "c40";
