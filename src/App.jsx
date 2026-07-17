@@ -1,3 +1,5 @@
+import useRecordStats from "./modules/records/hooks/useRecordStats";
+import useRecords from "./modules/records/hooks/useRecords";
 import {
   deleteSharedRecord,
   fetchSharedRecords,
@@ -899,6 +901,36 @@ export default function App() {
   const [activeWorkspaceModule, setActiveWorkspaceModule] = useState("dashboard");
 
   const [form, setForm] = useState(initialForm());
+
+  const {
+    records,
+    setRecords,
+    databaseMode,
+    setDatabaseMode,
+    lastSyncAt,
+    setLastSyncAt,
+    refreshSharedRecords: refreshSharedRecordsFromHook,
+  } = useRecords({
+    supabase,
+    isSupabaseConfigured,
+  });
+  
+  const {
+    currentDateRecords,
+    currentDateOk,
+    currentDateNok,
+    recentRecords,
+    rejectedRecords,
+    operatorShiftRecords,
+    operatorShiftOk,
+    operatorShiftNok,
+    dashboardStats,
+  } = useRecordStats({
+    records,
+    selectedDate: form.fecha,
+    form,
+  });
+  
   const {
     currentDateIncidents,
     currentMonthIncidents,
@@ -914,6 +946,7 @@ export default function App() {
     incidents,
     selectedDate: form.fecha,
   });
+
   const [values, setValues] = useState({});
   const [timerStart, setTimerStart] = useState(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -944,14 +977,7 @@ export default function App() {
   const [cpkDateTo, setCpkDateTo] = useState("");
   const [cpkTurno, setCpkTurno] = useState("");
   const [cpkOperario, setCpkOperario] = useState("");
-  const [records, setRecords] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem("f1012-zona-b") || "[]");
-    } catch {
-      return [];
-    }
-  });
-
+  
   const [showConfigModal, setShowConfigModal] = useState(false);
   
   const [configForm, setConfigForm] = useState({
@@ -1077,56 +1103,7 @@ async function updateTruckExpeditionDate(truckId, newDate) {
     `Camión ${activeTruck.truck_number} cerrado correctamente.\n\nNuevo camión activo: ${newTruck.truck_number}`
   );
 }
-useEffect(() => {
-  if (!isSupabaseConfigured || !supabase) return;
 
-  const channel = supabase
-    .channel("fabrimotor_records_realtime")
-    .on(
-      "postgres_changes",
-      {
-        event: "*",
-        schema: "public",
-        table: "fabrimotor_records",
-      },
-      async () => {
-        console.log("CAMBIO DETECTADO EN REGISTROS");
-
-        try {
-          const sharedRecords = await fetchSharedRecords(supabase);
-
-          if (Array.isArray(sharedRecords)) {
-            setRecords(sharedRecords);
-            localStorage.setItem(
-              "f1012-zona-b",
-              JSON.stringify(sharedRecords)
-            );
-          }
-        } catch (error) {
-          console.error("Error actualizando registros en tiempo real:", error);
-        }
-      }
-    )
-    .subscribe((status, error) => {
-      console.log("Realtime records status:", status);
-
-      if (error) {
-        console.error("Realtime records error:", error);
-      }
-    });
-
-  return () => {
-    supabase.removeChannel(channel);
-  };
-}, []);
-
-  const [currentUser, setCurrentUser] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem("fabrimotor-current-user") || "null");
-    } catch {
-      return null;
-    }
-  });
 
   const {
     appUsers,
@@ -1151,9 +1128,17 @@ useEffect(() => {
     isSupabaseConfigured,
     defaultUsers: USERS,
   });
+
+  const [currentUser, setCurrentUser] = useState(() => {
+  try {
+    return JSON.parse(
+      localStorage.getItem("fabrimotor-current-user") || "null"
+    );
+  } catch {
+    return null;
+  }
+});
   
-  const [databaseMode, setDatabaseMode] = useState(isSupabaseConfigured ? "Conectando..." : "Local");
-  const [lastSyncAt, setLastSyncAt] = useState("");
   const [showProductionStart, setShowProductionStart] = useState(() => {
     try {
       const storedUser = JSON.parse(localStorage.getItem("fabrimotor-current-user") || "null");
@@ -1195,59 +1180,23 @@ useEffect(() => {
     }
   }, [currentUser]);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    const loadSharedRecords = async () => {
-      if (!isSupabaseConfigured) {
-        setDatabaseMode("Local");
-        return;
-      }
-
-      try {
-        setDatabaseMode("Conectando...");
-        const sharedRecords = await fetchSharedRecords(supabase);
-
-        if (cancelled || !Array.isArray(sharedRecords)) return;
-
-        setRecords(sharedRecords);
-        localStorage.setItem("f1012-zona-b", JSON.stringify(sharedRecords));
-        setDatabaseMode("Compartida");
-        setLastSyncAt(new Date().toLocaleString("es-ES"));
-      } catch (error) {
-        console.error("No se ha podido cargar Supabase:", error);
-        setDatabaseMode("Local sin conexión");
-      }
-    };
-
-  
-    loadSharedRecords();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   const refreshSharedRecords = async () => {
-    if (!isSupabaseConfigured) {
-      alert("La base de datos compartida no está configurada. La aplicación está trabajando en modo local.");
-      return;
-    }
+  try {
+    await refreshSharedRecordsFromHook();
+    alert("Datos actualizados desde la base compartida.");
+  } catch (error) {
+    console.error(
+      "Error actualizando base compartida:",
+      error
+    );
 
-    try {
-      setDatabaseMode("Conectando...");
-      const sharedRecords = await fetchSharedRecords(supabase);
-      setRecords(sharedRecords || []);
-      localStorage.setItem("f1012-zona-b", JSON.stringify(sharedRecords || []));
-      setDatabaseMode("Compartida");
-      setLastSyncAt(new Date().toLocaleString("es-ES"));
-      alert("Datos actualizados desde la base compartida.");
-    } catch (error) {
-      console.error("Error actualizando base compartida:", error);
-      setDatabaseMode("Local sin conexión");
-      alert(`No se ha podido actualizar desde la base compartida:\n\n${error?.message || String(error)}`);
-    }
-  };
+    alert(
+      `No se ha podido actualizar desde la base compartida:\n\n${
+        error?.message || String(error)
+      }`
+    );
+  }
+};
 
   const refreshSharedUsers = async () => {
     if (!isSupabaseConfigured) {
@@ -1523,9 +1472,6 @@ const validation = useMemo(() => {
       matchSheet
     );
   });
-
-  const rejectedRecords = records.filter((record) => record.resultado === "NO OK");
-
 
   const getRejectedChecks = (record) => {
     const machineChecks = MACHINES[record.maquina] || [];
@@ -2265,11 +2211,6 @@ Tiempo restante aproximado: ${hyundaiWaitInfo.remainingMinutes} minutos.`
     closeEditRecord();
   };
 
-  const currentDateRecords = records.filter((record) => record.fecha === form.fecha);
-  const currentDateOk = currentDateRecords.filter((record) => record.resultado === "OK").length;
-  const currentDateNok = currentDateRecords.filter((record) => record.resultado === "NO OK").length;
-  const recentRecords = records.slice(0, 6);
-  
   const handleLogin = (user) => {
     setCurrentUser(user);
     localStorage.setItem("fabrimotor-current-user", JSON.stringify(user));
@@ -2327,57 +2268,36 @@ const handleLogout = () => {
   setCurrentUser(null);
 };
 
-async function handleCreatePlannedTruck() {
-  if (!isSupabaseConfigured || !supabase) return;
 
+const handleCreatePlannedTruck = async (plannedTruck) => {
   try {
-    const reference = appConfig.reference || "F-1012";
+    const payload = {
+      reference: plannedTruck.reference || appConfig.partCode || "F-1012",
+      truck_number: plannedTruck.truckNumber,
+      planned_expedition_date:
+        plannedTruck.plannedExpeditionDate || null,
+      status: plannedTruck.status || "PLANNED",
+      created_by: currentUser?.username || "Sistema",
+    };
 
-    const { data: scheduleRows, error: scheduleError } = await supabase
-      .from("f1012_truck_schedule")
-      .select("truck_number")
-      .eq("reference", reference);
-
-    if (scheduleError) throw scheduleError;
-
-    const { data: truckRows, error: trucksError } = await supabase
+    const { error } = await supabase
       .from("f1012_trucks")
-      .select("truck_number")
-      .eq("reference", reference);
+      .insert([payload]);
 
-    if (trucksError) throw trucksError;
-
-    const allTruckNumbers = [
-      ...(scheduleRows || []).map((truck) => Number(truck.truck_number || 0)),
-      ...(truckRows || []).map((truck) => Number(truck.truck_number || 0)),
-      Number(activeTruck?.truck_number || 0),
-    ].filter((number) => number > 0);
-
-    const nextTruckNumber =
-      allTruckNumbers.length > 0
-        ? Math.max(...allTruckNumbers) + 1
-        : 1;
-
-    await createPlannedTruck(supabase, {
-      reference,
-      truckNumber: nextTruckNumber,
-      plannedExpeditionDate: null,
-      notes: "",
-      createdBy: currentUser
-        ? `${currentUser.username} - ${currentUser.name}`
-        : "",
-    });
+    if (error) {
+      throw error;
+    }
 
     await loadTruckSchedule();
   } catch (error) {
     console.error("Error creando camión planificado:", error);
     alert(
-      `No se ha podido crear el camión planificado.\n\n${
-        error?.message || String(error)
+      `No se ha podido crear el camión planificado: ${
+        error?.message || "Error desconocido"
       }`
     );
   }
-}
+};
 
 async function handleUpdatePlannedTruck(truck, updates) {
   if (!isSupabaseConfigured || !supabase || !truck?.id) return;
@@ -2652,27 +2572,8 @@ async function handleSearchBox(boxNumber) {
     }
   };
 
-  const dashboardStats = {
-    totalRegistros: records?.length || 0,
-    rechazos: records?.filter?.((r) => Number(r?.rechazos || 0) > 0)?.length || 0,
-    operariosActivos: new Set((records || []).map((r) => r.operario).filter(Boolean)).size,
-    ultimaVerificacion:
-      records && records.length
-        ? records[records.length - 1]?.fecha || "-"
-        : "-",
-  };
-
   const operatorLastBox = truckProgress?.lastBox || null;
   const operatorLastRecord = getLastRecordForCurrentContext?.() || null;
-  const operatorShiftRecords = records.filter(
-    (record) =>
-      record.fecha === form.fecha &&
-      record.turno === form.turno &&
-      record.operario === form.operario
-  );
-  const operatorShiftOk = operatorShiftRecords.filter((record) => record.resultado === "OK").length;
-  const operatorShiftNok = operatorShiftRecords.filter((record) => record.resultado === "NO OK").length;
-
   if (!currentUser) {
     return <LoginScreen onLogin={handleLogin} users={appUsers} />;
   }
