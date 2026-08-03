@@ -31,3 +31,5 @@ src_unzipped/
 
 # Si en el futuro quieres permitir un ZIP concreto de releases,
 # lo podremos sacar de esta regla..env
+
+.env
