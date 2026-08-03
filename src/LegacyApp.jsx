@@ -4892,6 +4892,10 @@ async function handleSearchBox(boxNumber, referenceOverride = "") {
             boxLabels={operatorBoxLabels}
             loading={operatorDataLoading}
             onRefresh={openOperatorDashboard}
+            onManageOperators={() => {
+              setShowOperatorDashboard(false);
+              setShowAdminPanel(true);
+            }}
             onClose={() => setShowOperatorDashboard(false)}
           />
         </Suspense>

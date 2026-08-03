@@ -181,6 +181,7 @@ export default function OperatorDashboardModal({
   boxLabels = [],
   loading = false,
   onRefresh,
+  onManageOperators,
   onClose,
 }) {
   const [search, setSearch] = useState("");
@@ -286,7 +287,7 @@ export default function OperatorDashboardModal({
         <header className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 bg-white px-5 py-4 sm:px-7">
           <div>
             <div className="text-xs font-black uppercase tracking-[0.25em] text-blue-700">
-              FM Control · v2.15
+              FM Control · Operarios
             </div>
             <h2 className="mt-1 text-3xl font-black text-slate-950">
               Fichas de operarios
@@ -306,6 +307,17 @@ export default function OperatorDashboardModal({
               <RefreshCw className={`h-5 w-5 ${loading ? "animate-spin" : ""}`} />
               {loading ? "Actualizando..." : "Actualizar"}
             </button>
+
+            {onManageOperators && (
+              <button
+                type="button"
+                onClick={onManageOperators}
+                className="inline-flex min-h-12 items-center gap-2 rounded-2xl bg-[#1f6f73] px-4 text-sm font-black text-white hover:bg-[#18595d]"
+              >
+                Gestionar operarios
+              </button>
+            )}
+
             <button
               type="button"
               onClick={onClose}

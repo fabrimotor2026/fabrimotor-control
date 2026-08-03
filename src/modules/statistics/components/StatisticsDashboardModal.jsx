@@ -860,7 +860,7 @@ export default function StatisticsDashboardModal({
         <header className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 bg-white px-5 py-4 sm:px-7">
           <div>
             <div className="text-xs font-black uppercase tracking-[0.25em] text-blue-700">
-              FM Control · v2.17
+              FM Control · Estadísticas
             </div>
             <h2 className="mt-1 text-3xl font-black text-slate-950">
               Estadísticas de producción
