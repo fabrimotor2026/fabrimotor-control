@@ -1,0 +1,24 @@
+PERSONALIZACION CORPORATIVA FM CONTROL
+=====================================
+
+Cambios aplicados:
+- Titulo del navegador: FM Control | Fabrimotor
+- Favicon corporativo en 16x16 y 32x32
+- Icono Apple Touch de 180x180
+- Iconos PWA de 192x192, 512x512 y maskable
+- Manifest actualizado con nombre, descripcion y colores corporativos
+- Pantalla inicial de carga con logotipo Fabrimotor
+- Metadatos Open Graph para compartir el enlace
+- URL canonica: https://fmcontrol.fabrimotor.com/
+- Registro del service worker activado desde src/main.jsx
+- Cache PWA actualizada a fm-control-brand-v2
+- Eliminadas las imagenes residuales de React/Vite
+
+Publicacion:
+1. Abre una consola en la carpeta del proyecto.
+2. Ejecuta: npm install
+3. Ejecuta: npm run build
+4. Ejecuta: vercel --prod
+
+Nota:
+Si el navegador mantiene el favicon anterior, recarga con Ctrl+F5 o borra los datos del sitio.

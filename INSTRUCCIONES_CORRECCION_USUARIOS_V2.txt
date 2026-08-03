@@ -1,0 +1,26 @@
+CORRECCIÓN V2 - USUARIOS SUPABASE
+
+1) Sustituye src/App.jsx por el App.jsx de este ZIP.
+
+2) En Supabase:
+   SQL Editor > New Query
+   Ejecuta completo:
+   supabase_fix_users_v2.sql
+
+3) Reinicia Vite:
+   Ctrl+C
+   npm install
+   npm run dev -- --host 0.0.0.0
+
+4) Prueba:
+   - Entra como Administrador.
+   - Crea usuario prueba.
+   - Si Supabase rechaza algo, ahora saldrá un aviso con el error exacto.
+   - Comprueba Table Editor > fabrimotor_users.
+
+Cambios:
+- saveAdminUser sincroniza con Supabase.
+- upsertSharedUser guarda password.
+- fetchSharedUsers recupera password.
+- Roles normalizados.
+- SQL permite roles Encargado/Administrativo y añade password.
